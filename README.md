@@ -2,44 +2,183 @@
 
 **AI research that stress tests its own conclusions.**
 
-Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. Ask a hard market or strategy question and Crux researches it, commits to a first answer, stress tests it like a skeptical investor would, and shows you exactly what changed and why, with every fact traceable to the exact words in its source.
+Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
+Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ) for every reasoning step and [Tavily](https://tavily.com) for web search.
+
+![The Crux home page](docs/screenshots/landing.png)
+
+## Try it in a few minutes
+
+Every number below is from a real run of the demo question on 26 September 2026, with live SERV and Tavily calls.
+
+1. Run the app (see [Run it locally](#run-it-locally)) and open http://localhost:3000.
+2. The demo question, **"Are small businesses actually willing to accept crypto payments?"**, is shown faintly in the box. Press **→** (or Tab) to fill it in, or tap the box on a phone.
+3. Choose **Find the crux**. The report fills in stage by stage as each one finishes:
+
+   ![A run in progress: research done, the thesis being formed](docs/screenshots/running.png)
+
+   | Stage | What happens | Time |
+   | --- | --- | --- |
+   | Research | SERV plans 8 searches (half of them hunting for evidence against), Tavily runs them, 20 sources are picked, SERV extracts facts and Crux checks every quote | 21.7 s |
+   | Thesis | SERV commits to a first answer and names the assumptions it rests on | 7.3 s |
+   | Stress test | SERV challenges the thesis: weak assumptions, contradicting evidence, other explanations, risks, missing evidence | 13.1 s |
+   | Re-evaluate | Every assumption is re-judged against the evidence and the challenges | 9.7 s |
+   | Conclusion | The best-supported answer, its confidence, what's uncertain and what to check next | 8.8 s |
+   | What changed | Assembled from the recorded stages, no model call | 0 s |
+
+   About a minute in total, 6 SERV calls and 8 Tavily searches.
+4. Read the **Answer**, then open **Reasoning** and **Evidence**. Anything backed by facts has an **Evidence** link that opens just those facts.
+5. Choose **Download** for the report as a PDF.
+
+No keys? **Mock mode** runs the same app on built-in sample data at no cost. See [Run it locally](#run-it-locally).
+
+## The problem
+
+Most AI research tools search for evidence that supports an answer and then write it up confidently. They rarely look for the case against, the sources behind the claims are hard to check, and you can't see whether the reasoning ever changed its mind. For a decision like launching a product or entering a market, that confidence is the risk.
+
+## What Crux does
+
+### Answer
+
+The conclusion comes first, with its confidence and whether the stress test strengthened, weakened or overturned the first answer. From the demo run:
+
+![The Answer view](docs/screenshots/answer.png)
+
+### What changed?
+
+The first answer next to the answer after the stress test, and every material change with the reason and the evidence behind it. This view is assembled from what the stages actually recorded; it isn't generated after the fact.
+
+![What changed: the first answer, the final answer, and why it moved](docs/screenshots/what-changed.png)
+
+In the demo run, the thesis was **weakened**: three changes, each backed by specific facts and challenges, turned "many small businesses are willing" into "some are, under conditions, and adoption stays limited".
+
+### Stress test
+
+SERV acts as a skeptical investor and challenges the first answer. Each challenge has a severity and a type, names the assumptions it targets, and links to its evidence. The demo run raised 7 challenges, 1 of them critical.
+
+![The stress test](docs/screenshots/stress-test.png)
+
+### Assumptions, re-judged
+
+Every assumption the thesis depends on gets a verdict: supported, weakened, contradicted or unresolved, with the reasoning. If the re-evaluation skips one, Crux marks it unresolved rather than letting it pass silently. In the demo run: 3 weakened, 1 supported.
+
+![Assumptions with their verdicts](docs/screenshots/assumptions.png)
+
+### Evidence, fact-checked
+
+Every fact shows the exact words it came from, with a link to the source. The summary at the top says how many extracted facts were dropped because their quote wasn't in the source, and sources are labelled by type. The demo run kept 29 facts (20 for, 9 against) from 20 sources and dropped 1.
+
+![The Evidence view](docs/screenshots/evidence.png)
+
+Evidence links elsewhere in the report open this view filtered to the facts behind one point:
+
+![Evidence filtered to the facts behind one assumption](docs/screenshots/evidence-filtered.png)
+
+### Audit trail
+
+**Where it's used** on any fact opens its trail in both directions: the source and quote it rests on, and every place in the reasoning that relies on it (the thesis, assumptions, challenges, re-evaluation, conclusion).
+
+![The audit trail for one fact](docs/screenshots/audit-trail.png)
+
+### PDF report
+
+**Download** saves the whole report as a PDF straight to your device, built in the browser: the answer and what changed, then the reasoning, then the evidence as an appendix with every quote and a numbered source list.
+
+![Two pages of the PDF report](docs/screenshots/pdf.png)
+
+### Light and dark, desktop and phone
+
+The toggle at the top right switches light and dark (it follows the device until you use it, with no flash on load). Every view works from 320 px phones up.
+
+![The Answer view in dark mode](docs/screenshots/answer-dark.png)
+
+![Crux on a phone: home, answer and evidence](docs/screenshots/phones.png)
+
+## How SERV does the reasoning
+
+Every reasoning step is a separate SERV Reasoning call (OpenAI-compatible chat completion) with a strict JSON schema, so each stage's output is structured, recorded and auditable, never free text.
+
+| Call | Input | Output |
+| --- | --- | --- |
+| Query plan | The question | 2 to 4 supporting and 3 to 4 challenging searches (the schema requires both) |
+| Claims | The question and up to 20 source excerpts | Facts, each with the exact quote from its source, a category and a stance; plus each source's publisher type |
+| Thesis | The checked facts | A first answer, its confidence and why, the assumptions it depends on, the facts behind it |
+| Stress test | Facts and thesis | Challenges with type, severity, target assumptions and evidence; failure conditions; missing evidence |
+| Re-evaluation | Facts, thesis, stress test | A verdict and reasoning for every assumption, the revised thesis, every change and what caused it |
+| Conclusion | The whole record | Final answer, confidence, key supporting and challenging facts, uncertainties, next validation steps |
+
+Each call also carries SERV's `serv_prompt_guard`, because the stages read untrusted web text. Model: `gpt-5.4-mini` through SERV by default (`SERV_MODEL` to change it). `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check to every stage.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  Browser[Browser: Next.js app]
+  API["POST /api/research<br/>(NDJSON stream)"]
+  Pipeline[Pipeline]
+  Tavily[Tavily search]
+  SERV[SERV Reasoning]
+  Check["Fact check and source labels<br/>(plain code)"]
+  Store[(".data/projects<br/>(JSON on this machine)")]
+  PDF["react-pdf<br/>(in the browser)"]
+
+  Browser -->|question| API
+  API --> Pipeline
+  Pipeline -->|query plan, claims, thesis,<br/>stress test, re-evaluation, conclusion| SERV
+  Pipeline -->|8 searches| Tavily
+  Pipeline --> Check
+  Pipeline -->|each stage as it finishes| API
+  API -->|streamed events| Browser
+  Pipeline --> Store
+  Browser -->|Download| PDF
 ```
-Question → Research → Thesis → Stress test → Re-evaluate → Conclusion → What changed + Audit trail
-```
 
-## What it does
+1. The browser posts the question; the API streams one event per stage back as NDJSON, so the report fills in live.
+2. The pipeline ([src/lib/pipeline.ts](src/lib/pipeline.ts)) runs the stages in order and records an audit entry for each: model, duration, inputs, output and warnings.
+3. Research ([src/lib/research/collect.ts](src/lib/research/collect.ts)) plans the searches, runs them, picks sources query by query, and has SERV extract facts; the fact check and source labels are plain code.
+4. The reasoning stages ([src/lib/reasoning/stages.ts](src/lib/reasoning/stages.ts)) cite records by ID. Unknown IDs are removed and logged before anything is saved.
+5. Runs are saved as JSON on the machine running the app and reopen at `/research/:id`. Nothing is sent anywhere else.
 
-1. **Researches** the question on the web (Tavily). SERV plans two sets of searches: ones looking for evidence that the answer is yes, and ones hunting for evidence that it's no (failures, low adoption, critics, costs, regulation).
-2. **Extracts facts with proof.** SERV pulls out specific, checkable facts, and each one must quote the exact words from its source. Crux checks every quote against the source text and drops facts it can't find.
-3. **Forms a first answer** (the thesis) and names the assumptions it depends on.
-4. **Stress tests it:** SERV looks for weak assumptions, contradicting evidence, alternative explanations, risks and missing evidence.
-5. **Re-evaluates** each assumption: supported, weakened, contradicted or unresolved.
-6. **Concludes** with the best-supported answer, its confidence, what remains uncertain, and cheap next steps to find out.
-7. **Shows what changed** between the first answer and the final one, and why.
+## Honest by design
 
-## Using it
+A research tool is only useful if you can trust what it shows, so the rules below are enforced in code, with the prompts as a second layer.
 
-- **Ask a question** on the home page. For a demo, the example question is shown faintly in the box: press **→** (or Tab) on a computer, or tap the box on a phone, to fill it in.
-- **Read the report** in three views:
-  - **Answer:** the conclusion, what changed and why, next steps, and what's still uncertain.
-  - **Reasoning:** the first answer, the stress test (most serious challenges first), and every assumption with its verdict.
-  - **Evidence:** every fact with its source quote, the fact-check summary, and the sources labelled by type.
-- **Follow the proof:** anything backed by facts has an **Evidence** link that opens just those facts. Each fact's **Where it's used** button shows the audit trail.
-- **Download** the report as a PDF, straight to your device.
-- Switch **light / dark** with the toggle at the top right. The **Home** button at the bottom right returns to the start.
+| Rule | How it is enforced |
+| --- | --- |
+| Every fact is backed by its source's own words | SERV must quote each source it cites. [verify.ts](src/lib/research/verify.ts) checks each quote against the source text (ignoring case, spacing, curly quotes and dashes; `...` may skip words, in order). A source whose quote isn't found stops backing the fact; a fact with no quote found is dropped and counted in the summary |
+| Figures must match | A figure a fact states (in digits) must appear in one of its quotes, as digits or words ("thirty-three" matches 33). If not, the fact is kept, flagged in the report, and passed to the later stages as unverified |
+| The case against is always searched for | The query-plan schema requires 3 to 4 challenging searches. They run interleaved with the supporting ones, and sources are picked search by search in turn, so a supporting search's higher relevance scores can't crowd them out |
+| A missing case against is called a gap, not proof | If no evidence against the answer survives, the later stages are told so explicitly, and the Evidence view says so |
+| Weak sources count for less | Social posts and sources over three years old are flagged, only fill source slots the others leave open, and facts resting only on them are marked as weak evidence for the later stages and in the report |
+| Citations can't dangle | Every ID a stage cites is checked against the records that exist. Unknown ones are removed and logged, so every audit-trail link leads somewhere |
+| No assumption is skipped | The re-evaluation must judge every assumption; any it leaves out is recorded as unresolved |
+| What changed is not rewritten | It's assembled from the recorded thesis, stress test and re-evaluation, not generated separately |
+| Web text is untrusted | Excerpts are labelled as untrusted in every prompt and every call carries SERV's prompt guard |
 
-## Running it
+Two limits to be plain about: a fact's **stance** (for or against) and the **type** of an unrecognised source are the model's judgement, and the fact check proves the quote is real, not that the fact's wording is a perfect paraphrase beyond its figures.
+
+## What was checked
+
+- **Live runs with SERV and Tavily.** Three live runs of the crypto question on 26 September 2026. The second and third ran after the balanced-research change: evidence went from 24 for and 0 against to 22 for and 9 against, and source types from "20 company / blog" to a mix of research, government, industry, news and reference. Every quote passed except one, which was correctly dropped.
+- **The screenshots** are from the third run. After it, three fixes were made that it had exposed: spelled-out figures ("Thirty-three percent") now match digits, a fact extracted twice is merged, and more publishers are recognised. The report shown was reprocessed with those fixes from the same SERV output, which is why its answer still mentions one "unverified" figure: that was the false flag the first fix removed.
+- **Unit tests** (`npm test`, 57 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping, prompt-guard retries, and the full pipeline on sample data.
+- **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads from sample and live reports, the demo question by arrow key and by tap.
+- **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
+
+## Run it locally
 
 You need [Node.js](https://nodejs.org) 22 or newer.
 
 ```bash
+git clone https://github.com/Mhiah/crux.git
+cd crux
 npm install
 cp .env.example .env.local   # then add SERV_API_KEY and TAVILY_API_KEY
 npm run dev                  # open http://localhost:3000
 ```
 
-**Mock mode** runs the whole app on built-in sample data, with no SERV or Tavily calls and no cost. It's used automatically when the keys are missing, or you can force it:
+**Mock mode** runs everything on built-in sample data, with no SERV or Tavily calls and no cost. It's used automatically when the keys are missing, or you can force it:
 
 ```bash
 CRUX_MOCK=1 npm run dev                    # macOS / Linux
@@ -48,9 +187,17 @@ $env:CRUX_MOCK="1"; npm run dev            # Windows PowerShell
 
 Mock runs always show the same sample report (about AI bookkeeping for Nigerian SMEs), whatever you ask, and are labelled as mock.
 
-**Live mode** uses your keys. Each question makes about 6 SERV calls and 8 Tavily searches and takes 1 to 2 minutes. On Windows, clear mock mode first with `Remove-Item Env:CRUX_MOCK`, or open a new PowerShell window.
+**Live mode** uses your keys: about 6 SERV calls and 8 Tavily searches per question, around a minute. On Windows, clear mock mode first with `Remove-Item Env:CRUX_MOCK`, or open a new PowerShell window.
 
-**On a phone:** keep the app running on your computer, connect the phone to the same Wi-Fi, and open the **Network** address that `npm run dev` prints (for example `http://192.168.0.3:3000`).
+**On a phone:** keep the app running, connect the phone to the same Wi-Fi, and open the **Network** address that `npm run dev` prints (for example `http://192.168.0.3:3000`).
+
+| Variable | Purpose |
+| --- | --- |
+| `SERV_API_KEY` | SERV Reasoning. Without it, reasoning uses sample data |
+| `TAVILY_API_KEY` | Web search. Without it, research uses sample sources |
+| `SERV_MODEL` | Model to use through SERV (default `gpt-5.4-mini`) |
+| `SERV_SHADOW_AGENT` | `1` adds SERV's shadow-agent check to each stage (extra calls) |
+| `CRUX_MOCK` | `1` forces mock mode even with keys |
 
 Other commands:
 
@@ -62,36 +209,41 @@ npm run lint
 npm run build
 ```
 
-## How it works
+## Project layout
 
-- **SERV Reasoning** (`src/lib/reasoning/serv.ts`) is OpenAI-compatible. Every reasoning step is a chat completion with a strict JSON schema and SERV's `serv_prompt_guard`, because the stages read untrusted web text. The guard sometimes blocks harmless requests, so a block (a refusal that used no tokens) is retried up to twice; a refusal from the model itself is not. `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check on each stage.
-- **Balanced research** (`src/lib/research/collect.ts`): SERV writes 2 to 4 supporting and 3 to 4 challenging searches, which run interleaved. Sources are picked search by search in turn, so the challenging searches' results aren't crowded out, and weak sources only fill spare slots. If no evidence against the answer survives, the later stages are told it's a gap in the research, not confirmation, and the Evidence view says so.
-- **Fact check** (`src/lib/research/verify.ts`, plain code, no extra calls): a source only backs a fact if the fact's quote is found in that source's text. Facts with no quote found are dropped, and figures a fact states that its quote doesn't contain are flagged and passed on as unverified.
-- **Source quality** (`src/lib/research/sources.ts`): sources are labelled research, government / official, industry report, news, reference, company / blog, or social / forum. Known sites are recognised by address; for anything else, SERV labels the publisher while it extracts facts. Social posts and sources over three years old are flagged as weak.
-- **Stages** (`src/lib/reasoning/stages.ts`) cite records by ID (sources `S1`, facts `C1`, assumptions `A1`, challenges `X1`). Every citation is checked and unknown IDs are removed, so an audit-trail link never dangles. The reading views hide the IDs and turn them into Evidence links (`src/lib/plain.ts`).
-- **What changed** is assembled from the recorded stages, not generated, so each line is what the reasoning actually said.
-- **API:** `POST /api/research` with `{ "question": "…" }` streams the pipeline as NDJSON; `GET /api/research/:id` returns a saved run. Runs are saved as JSON in `.data/projects/` on the machine running the app, and reopen at `/research/:id`.
-- **PDF** (`src/components/report-pdf.tsx`) is built in the browser with react-pdf. Inter is embedded (SIL Open Font License) because the standard PDF fonts can't draw ₦.
+```
+src/
+  app/
+    page.tsx                  Home page and live results
+    research/[id]/page.tsx    A saved report
+    api/research/             POST a question (streams NDJSON), GET a saved run
+    icon.svg                  Tab icon
+  components/
+    workstation.tsx           Answer, Reasoning and Evidence views
+    report-pdf.tsx            The PDF report
+    refs.tsx                  Audit-trail panel
+    brand.tsx                 The CRUX wordmark
+    site-header.tsx, theme-toggle.tsx, home-button.tsx
+  lib/
+    pipeline.ts               Runs the stages and records the audit trail
+    reasoning/                SERV client, prompts, strict schemas, stages
+    research/                 Search, source selection, fact check, source labels
+    plain.ts                  Turns cited IDs into plain sentences and Evidence links
+    trace.ts                  Resolves any record to what it rests on and what uses it
+    mock/                     Sample data for mock mode
+    types.ts                  The data model
+tests/                        Vitest unit tests
+docs/screenshots/             The images in this README
+```
 
-## Project map
+## Known limitations
 
-| Path | What's there |
-|---|---|
-| `src/app/` | Pages: landing and live results (`page.tsx`), saved reports (`research/[id]`), the API routes |
-| `src/components/` | Report views (`workstation.tsx`), PDF (`report-pdf.tsx`), audit-trail panel (`refs.tsx`), logo (`brand.tsx`), header, theme toggle |
-| `src/lib/pipeline.ts` | Runs the stages in order and records the audit trail |
-| `src/lib/reasoning/` | SERV client, prompts, strict schemas, stages |
-| `src/lib/research/` | Search, source selection, fact checking, source labels |
-| `src/lib/mock/` | Sample data for mock mode |
-| `tests/` | Unit tests (Vitest) |
-
-## Status
-
-| Phase | | Status |
-|---|---|---|
-| 1 | Reasoning engine: research, thesis, stress test, re-evaluation, conclusion | ✅ |
-| 2 | Evidence layer: fact-checked claims, source quality, balanced research | ✅ |
-| 3 | Product UI: landing page and results in Answer / Reasoning / Evidence views | ✅ |
-| 4 | What changed: first answer vs final, with the reasons and evidence behind each change | ✅ |
-| 5 | Audit trail: from the answer to the reasoning, facts, quotes and sources | ✅ |
-| 6 | Demo polish: branding, light / dark, PDF download, mobile, one-tap demo question | ✅ |
+- **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.
+- **Judgement calls.** A fact's stance and the type of an unrecognised source come from the model. Recognised sites are labelled by address.
+- **What the fact check proves.** That each quote really appears in its source, and that the fact's figures appear in it. It doesn't prove the fact's wording is a faithful summary beyond that. Spelled-out numbers are read up to ninety-nine.
+- **SERV's prompt guard** occasionally blocks harmless requests. Blocks are retried up to twice; if a run still fails, running it again usually works.
+- **One model.** Runs use `gpt-5.4-mini` through SERV unless `SERV_MODEL` is set; other models haven't been tested.
+- **Runs stay on one machine.** Reports are saved as local files and shared by downloading the PDF. There are no accounts and no hosted version.
+- **Mock mode** has one sample report, whatever the question.
+- **The PDF has no page numbers.**
+- **No CI.** The checks are the unit tests, type check, lint, build and browser runs listed above.
