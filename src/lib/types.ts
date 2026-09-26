@@ -1,3 +1,5 @@
+import type { SourceKind } from "./research/sources";
+
 /**
  * Domain model for a research run. Mirrors the build plan's data model:
  * ResearchProject → Source → Claim → Thesis → StressTest → Reevaluation → Conclusion,
@@ -17,7 +19,15 @@ export type Source = {
   published_date: string | null;
   excerpt: string;
   relevance: number; // 0..1, from the search provider
+  /** Publisher type, judged from the web address. */
+  kind: SourceKind;
+  /** Why this is weak evidence (social post, out of date); empty when it isn't. */
+  flags: string[];
 };
+
+/** A claim resting only on flagged sources is weak evidence, however it's worded. */
+export const weakOnly = (claim: Claim, sources: Source[]) =>
+  claim.source_ids.length > 0 && claim.source_ids.every((id) => (sources.find((s) => s.id === id)?.flags ?? []).length > 0);
 
 export type ClaimCategory =
   | "market_demand"
@@ -33,15 +43,21 @@ export type ClaimCategory =
 export type Claim = {
   id: string; // C1, C2, ...
   text: string;
-  source_ids: string[];
+  source_ids: string[]; // only sources whose quote was found in their text
   category: ClaimCategory;
   stance: "supports" | "challenges" | "neutral"; // relative to the question's "yes"
+  /** The exact source words the claim rests on, each verified against that source's excerpt. */
+  quotes: { source_id: string; text: string }[];
+  /** Figures in the claim that none of its quotes contain: kept, but flagged. */
+  unmatched_numbers: string[];
 };
 
 export type Research = {
   queries: string[];
   sources: Source[];
   claims: Claim[];
+  /** Outcome of checking every extracted claim's quotes against its sources. */
+  fact_check: { extracted: number; dropped: number; flagged: number };
 };
 
 export type Assumption = {

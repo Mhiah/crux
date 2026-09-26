@@ -1,3 +1,4 @@
+import { SOURCE_KIND_LABEL } from "./research/sources";
 import type { ResearchProject } from "./types";
 
 /**
@@ -82,7 +83,7 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
       kind,
       title: s.title,
       body: s.excerpt,
-      meta: [s.publisher, s.published_date].filter((m): m is string => !!m),
+      meta: [s.publisher, s.published_date, s.kind && SOURCE_KIND_LABEL[s.kind], ...(s.flags ?? [])].filter((m): m is string => !!m),
       url: s.url,
       restsOn: [],
       usedBy: claims.length ? [{ label: "Claims drawn from this source", text: "", ids: claims }] : [],
@@ -96,8 +97,12 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
       id,
       kind,
       title: c.text,
-      body: "",
-      meta: [c.category.replace(/_/g, " "), c.stance],
+      body: (c.quotes ?? []).map((q) => `“${q.text}” (${q.source_id})`).join("\n\n"),
+      meta: [
+        c.category.replace(/_/g, " "),
+        c.stance,
+        ...(c.unmatched_numbers?.length ? [`figures not in source: ${c.unmatched_numbers.join(", ")}`] : []),
+      ],
       restsOn: nonEmpty([{ label: "Sources", ids: c.source_ids }]),
       usedBy: citations(p, id),
     };
@@ -128,7 +133,7 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
     meta: [x.kind.replace(/_/g, " "), x.severity],
     restsOn: nonEmpty([
       { label: "Grounded in claims", ids: x.claim_ids },
-      { label: "Attacks assumptions", ids: x.target_assumption_ids },
+      { label: "Challenges assumptions", ids: x.target_assumption_ids },
     ]),
     usedBy: citations(p, id).filter((u) => !u.label.startsWith(`Challenge ${id}`)),
   };

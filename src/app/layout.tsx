@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { THEME_KEY } from "@/lib/theme";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,16 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crux",
-  description: "An AI research engine that forms a thesis, stress-tests it with SERV Reasoning, and shows what changed.",
+  title: "Crux | AI research that stress tests its own conclusions",
+  description: "Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it.",
 };
+
+// Applies a saved light/dark choice before first paint, so the page never flashes the wrong theme.
+const themeScript = `(function(){try{var t=localStorage.getItem(${JSON.stringify(THEME_KEY)});if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}})()`;
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

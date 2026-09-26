@@ -1,27 +1,22 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { HomeButton } from "@/components/home-button";
+import { SiteHeader } from "@/components/site-header";
+import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
 /**
- * Phase 1 harness: runs the pipeline and shows each stage's raw output as it streams.
- * The research workstation (evidence, thesis, stress test panels, What Changed, audit
- * trail) replaces this in Phase 3.
+ * Shown faintly as the box's placeholder; pressing → (or Tab) in the empty box fills it in,
+ * and so does tapping the empty box on a touchscreen.
+ * Nothing runs, and no credits are spent, until the button is pressed.
  */
+const DEMO_QUESTION = "Are small businesses actually willing to accept crypto payments?";
 
-const STAGES: { key: Stage; label: string }[] = [
-  { key: "research", label: "Research" },
-  { key: "thesis", label: "Thesis" },
-  { key: "stress_test", label: "Stress Test" },
-  { key: "reevaluation", label: "Re-evaluate" },
-  { key: "conclusion", label: "Conclusion" },
-  { key: "what_changed", label: "What Changed?" },
-];
-
-const EXAMPLE = "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?";
-
+/** Ask a question and watch the report fill in stage by stage as the pipeline streams. */
 export default function Home() {
-  const [question, setQuestion] = useState(EXAMPLE);
+  const [question, setQuestion] = useState("");
   const [running, setRunning] = useState(false);
   const [active, setActive] = useState<Stage | null>(null);
   const [project, setProject] = useState<ResearchProject | null>(null);
@@ -32,7 +27,7 @@ export default function Home() {
     if (event.type === "project") setMode(event.project.mode);
     if (event.type === "stage_started") setActive(event.stage);
     if (event.type === "stage_completed") setProject(event.project);
-    if (event.type === "error") setError(`${event.stage ?? "Pipeline"} failed: ${event.message}`);
+    if (event.type === "error") setError(`${STAGES.find((s) => s.key === event.stage)?.label ?? "The pipeline"} failed: ${event.message}`);
     if (event.type === "done") {
       setProject(event.project);
       setActive(null);
@@ -72,65 +67,115 @@ export default function Home() {
     }
   }
 
-  const completed = new Set(project?.audit.map((a) => a.stage));
+  const activeLabel = STAGES.find((s) => s.key === active)?.label;
+  const tooShort = question.trim().length < 10;
+
+  function newQuestion() {
+    setProject(null);
+    setError(null);
+    setMode(null);
+  }
+
+  const header = (
+    <SiteHeader onHome={newQuestion} homeDisabled={running}>
+      {project && !running && (
+        <button type="button" onClick={newQuestion} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
+          New<span className="max-[359px]:hidden"> question</span>
+        </button>
+      )}
+    </SiteHeader>
+  );
+
+  // Landing: the name, what Crux does, and the question box.
+  if (!running && !project) {
+    return (
+      <>
+        {header}
+        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
+          <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
+            AI research that stress tests its own conclusions.
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
+            Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it.
+          </p>
+
+          <form
+            className="mt-10 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-2 shadow-sm sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!tooShort) run();
+            }}
+          >
+            {/* A textarea so a long question wraps on phones instead of being cut off; Enter still submits. */}
+            <textarea
+              rows={1}
+              className="min-w-0 flex-1 resize-none bg-transparent px-3 py-3 text-base leading-snug [field-sizing:content] placeholder:text-muted/60 focus:outline-none max-sm:min-h-[4.5rem]"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onPointerDown={(e) => {
+                if (!question && e.pointerType === "touch") setQuestion(DEMO_QUESTION);
+              }}
+              onKeyDown={(e) => {
+                if (!question && (e.key === "ArrowRight" || e.key === "Tab")) {
+                  e.preventDefault();
+                  setQuestion(DEMO_QUESTION);
+                  return;
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!tooShort) run();
+                }
+              }}
+              placeholder={DEMO_QUESTION}
+              aria-label="Your question"
+              maxLength={500}
+            />
+            <button className="rounded-xl bg-foreground px-5 py-3 font-medium text-background transition disabled:opacity-40" disabled={tooShort}>
+              Find the crux
+            </button>
+          </form>
+
+          {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
+        </main>
+      </>
+    );
+  }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Crux</h1>
-      <p className="mt-1 text-sm opacity-70">Forms a thesis, stress-tests it with SERV Reasoning, and shows what changed.</p>
+    <>
+      {header}
+      <main className="mx-auto w-full max-w-4xl px-5 pt-8 pb-28 sm:pt-12">
+        <h1 className="text-2xl font-semibold leading-snug tracking-tight print:hidden">{question}</h1>
 
-      <form
-        className="mt-6 flex flex-col gap-3 sm:flex-row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!running) run();
-        }}
-      >
-        <input
-          className="flex-1 rounded border border-current/20 bg-transparent px-3 py-2"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask a hard market or strategy question"
-        />
-        <button className="rounded bg-foreground px-4 py-2 text-background disabled:opacity-50" disabled={running}>
-          {running ? "Researching…" : "Research"}
-        </button>
-      </form>
+        {mode === "mock" && (
+          <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn print:hidden">
+            Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made.
+          </p>
+        )}
 
-      {mode === "mock" && (
-        <p className="mt-3 text-sm text-amber-600">Mock mode: illustrative fixtures, not real research. Set SERV_API_KEY and TAVILY_API_KEY for live runs.</p>
-      )}
+        <div className="mt-6 space-y-2 print:hidden">
+          <Progress project={project} active={active} />
+          {running && activeLabel && <p className="text-sm text-muted">Working on {activeLabel.toLowerCase()}…</p>}
+        </div>
 
-      <ol className="mt-6 flex flex-wrap gap-2 text-sm">
-        {STAGES.map((s) => (
-          <li
-            key={s.key}
-            className={`rounded-full border px-3 py-1 ${
-              completed.has(s.key) ? "border-green-600 text-green-600" : active === s.key ? "animate-pulse border-current" : "border-current/20 opacity-50"
-            }`}
-          >
-            {s.label}
-          </li>
-        ))}
-      </ol>
+        {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+        {project && !running && project.status === "complete" && (
+          <p className="mt-4 text-sm print:hidden">
+            <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
+              Saved report
+            </Link>{" "}
+            <span className="text-muted">(reopen or share this run later)</span>
+          </p>
+        )}
 
-      {project?.audit.map((a) => (
-        <details key={a.stage} className="mt-4 rounded border border-current/20 p-3" open={a.stage === "what_changed"}>
-          <summary className="cursor-pointer font-medium">
-            {STAGES.find((s) => s.key === a.stage)?.label}{" "}
-            <span className="text-sm font-normal opacity-60">
-              {(a.duration_ms / 1000).toFixed(1)}s{a.model ? ` · ${a.model}` : ""}
-              {a.warnings.length ? ` · ${a.warnings.length} warning(s)` : ""}
-            </span>
-          </summary>
-          {a.warnings.map((w) => (
-            <p key={w} className="mt-2 text-sm text-amber-600">{w}</p>
-          ))}
-          <pre className="mt-2 overflow-x-auto text-xs">{JSON.stringify(a.output, null, 2)}</pre>
-        </details>
-      ))}
-    </main>
+        {project && (
+          <div className="mt-8">
+            <Workstation project={project} downloadable={!running} />
+          </div>
+        )}
+      </main>
+      {!running && <HomeButton onHome={newQuestion} />}
+    </>
   );
 }
