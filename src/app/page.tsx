@@ -6,12 +6,15 @@ import { SiteHeader } from "@/components/site-header";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
-/** Pre-filled so a demo is one click; nothing runs (and no credits are spent) until the button is pressed. */
+/**
+ * Shown faintly as the box's placeholder; pressing → (or Tab) in the empty box fills it in.
+ * Nothing runs, and no credits are spent, until the button is pressed.
+ */
 const DEMO_QUESTION = "Are small businesses actually willing to accept crypto payments?";
 
 /** Ask a question and watch the report fill in stage by stage as the pipeline streams. */
 export default function Home() {
-  const [question, setQuestion] = useState(DEMO_QUESTION);
+  const [question, setQuestion] = useState("");
   const [running, setRunning] = useState(false);
   const [active, setActive] = useState<Stage | null>(null);
   const [project, setProject] = useState<ResearchProject | null>(null);
@@ -104,16 +107,21 @@ export default function Home() {
             {/* A textarea so a long question wraps on phones instead of being cut off; Enter still submits. */}
             <textarea
               rows={1}
-              className="min-w-0 flex-1 resize-none bg-transparent px-3 py-3 text-base leading-snug [field-sizing:content] focus:outline-none max-sm:min-h-[4.5rem]"
+              className="min-w-0 flex-1 resize-none bg-transparent px-3 py-3 text-base leading-snug [field-sizing:content] placeholder:text-muted/60 focus:outline-none max-sm:min-h-[4.5rem]"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onKeyDown={(e) => {
+                if (!question && (e.key === "ArrowRight" || e.key === "Tab")) {
+                  e.preventDefault();
+                  setQuestion(DEMO_QUESTION);
+                  return;
+                }
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
                   if (!tooShort) run();
                 }
               }}
-              placeholder="Ask a hard business question…"
+              placeholder={DEMO_QUESTION}
               aria-label="Your question"
               maxLength={500}
             />
