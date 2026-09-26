@@ -31,8 +31,6 @@ Every number below is from a real run of the demo question on 26 September 2026,
 4. Read the **Answer**, then open **Reasoning** and **Evidence**. Anything backed by facts has an **Evidence** link that opens just those facts.
 5. Choose **Download** for the report as a PDF.
 
-No keys? **Mock mode** runs the same app on built-in sample data at no cost. See [Run it locally](#run-it-locally).
-
 ## The problem
 
 Most AI research tools search for evidence that supports an answer and then write it up confidently. They rarely look for the case against, the sources behind the claims are hard to check, and you can't see whether the reasoning ever changed its mind. For a decision like launching a product or entering a market, that confidence is the risk.
@@ -162,8 +160,8 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 - **Live runs with SERV and Tavily.** Four live runs of the crypto question on 26 September 2026. From the second run on, after the balanced-research change, evidence went from 24 for and 0 against to a real case against (9 against in the third run, 6 in the fourth), and source types from "20 company / blog" to a mix of research, industry, news and company sources.
 - **The screenshots** are from the fourth run, made after the last round of fixes and shown exactly as it came back. All 30 extracted facts passed the quote check; 1 is flagged because it says "in 2026" while its quote doesn't give a year.
-- **Unit tests** (`npm test`, 66 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline on sample data.
-- **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads from sample and live reports, the demo question by arrow key and by tap.
+- **Unit tests** (`npm test`, 66 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
+- **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
 
 ## Run it locally
@@ -178,26 +176,16 @@ cp .env.example .env.local   # then add SERV_API_KEY and TAVILY_API_KEY
 npm run dev                  # open http://localhost:3000
 ```
 
-**Mock mode** runs everything on built-in sample data, with no SERV or Tavily calls and no cost. It's used automatically when the keys are missing, or you can force it:
-
-```bash
-CRUX_MOCK=1 npm run dev                    # macOS / Linux
-$env:CRUX_MOCK="1"; npm run dev            # Windows PowerShell
-```
-
-Mock runs always show the same sample report (about AI bookkeeping for Nigerian SMEs), whatever you ask, and are labelled as mock.
-
-**Live mode** uses your keys: about 6 SERV calls and 8 Tavily searches per question, around a minute. On Windows, clear mock mode first with `Remove-Item Env:CRUX_MOCK`, or open a new PowerShell window.
+Each question uses about 6 SERV calls and 8 Tavily searches and takes around a minute.
 
 **On a phone:** keep the app running, connect the phone to the same Wi-Fi, and open the **Network** address that `npm run dev` prints (for example `http://192.168.0.3:3000`).
 
 | Variable | Purpose |
 | --- | --- |
-| `SERV_API_KEY` | SERV Reasoning. Without it, reasoning uses sample data |
-| `TAVILY_API_KEY` | Web search. Without it, research uses sample sources |
+| `SERV_API_KEY` | SERV Reasoning |
+| `TAVILY_API_KEY` | Web search |
 | `SERV_MODEL` | Model to use through SERV (default `gpt-5.4-mini`) |
 | `SERV_SHADOW_AGENT` | `1` adds SERV's shadow-agent check to each stage (extra calls) |
-| `CRUX_MOCK` | `1` forces mock mode even with keys |
 
 Other commands:
 
@@ -230,7 +218,7 @@ src/
     research/                 Search, source selection, fact check, source labels
     plain.ts                  Turns cited IDs into plain sentences and Evidence links
     trace.ts                  Resolves any record to what it rests on and what uses it
-    mock/                     Sample data for mock mode
+    mock/                     Sample data for the tests
     types.ts                  The data model
 tests/                        Vitest unit tests
 docs/screenshots/             The images in this README
@@ -244,6 +232,5 @@ docs/screenshots/             The images in this README
 - **SERV's prompt guard** occasionally blocks harmless requests. Blocks are retried up to twice; if a run still fails, running it again usually works.
 - **One model.** Runs use `gpt-5.4-mini` through SERV unless `SERV_MODEL` is set; other models haven't been tested.
 - **Runs stay on one machine.** Reports are saved as local files and shared by downloading the PDF. There are no accounts and no hosted version.
-- **Mock mode** has one sample report, whatever the question.
 - **The PDF has no page numbers.**
 - **No CI.** The checks are the unit tests, type check, lint, build and browser runs listed above.
