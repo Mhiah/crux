@@ -1,15 +1,32 @@
+import type { CSSProperties } from "react";
+import { outfit } from "@/lib/fonts";
+
 /**
- * The Crux mark: chevrons running clockwise around an open arc, forming the "C" of the
- * wordmark (the gap on the right is what makes it a C rather than a ring). Drawn in
- * currentColor so it follows the theme.
+ * The Crux wordmark: a C drawn from chevrons running clockwise (open on the right), set
+ * as the first letter of "CRUX" in Outfit Bold. Everything is drawn in currentColor so
+ * it follows the theme.
  */
 
-// Positions every 30° clockwise from the top; the three on the right are left out for the C's opening.
+// Chevron positions every 30° clockwise from the top; the three on the right are left out for the C's opening.
 const CHEVRONS = [0, 30, 150, 180, 210, 240, 270, 300, 330];
+const STROKE = 13;
+// The chevrons' measured ink bounds, so the C's box has no empty margin (and nothing is clipped).
+const INK = { x: -56.7, y: -56.7, w: 92.2, h: 113.4 };
 
-export function CruxMark({ className = "", weight = 11 }: { className?: string; weight?: number }) {
+// Outfit Bold metrics (measured): capital height and the space built in to the left of the R.
+const CAP_HEIGHT = 0.719;
+const R_LEFT_BEARING = 0.0625;
+// Round letters are drawn slightly taller than flat ones so they look the same height.
+const OVERSHOOT = 0.015;
+// Visible space left between the C and the R: about the gap between the other letters.
+const C_TO_R = 0.04;
+
+const markHeight = CAP_HEIGHT * (1 + 2 * OVERSHOOT);
+const markWidth = (markHeight * INK.w) / INK.h;
+
+export function CruxMark({ className = "", style }: { className?: string; style?: CSSProperties }) {
   return (
-    <svg viewBox="-50 -50 100 100" className={className} aria-hidden>
+    <svg viewBox={`${INK.x} ${INK.y} ${INK.w} ${INK.h}`} className={className} style={style} aria-hidden>
       {CHEVRONS.map((deg) => (
         <path
           key={deg}
@@ -17,7 +34,7 @@ export function CruxMark({ className = "", weight = 11 }: { className?: string; 
           transform={`rotate(${deg - 90}) translate(40 0) rotate(90)`}
           fill="none"
           stroke="currentColor"
-          strokeWidth={weight}
+          strokeWidth={STROKE}
           strokeLinecap="square"
           strokeLinejoin="miter"
         />
@@ -26,15 +43,20 @@ export function CruxMark({ className = "", weight = 11 }: { className?: string; 
   );
 }
 
-/**
- * The mark as the C, then "RUX" in bold italic capitals. The mark is sized to the capital
- * height and sits on the baseline, so C, R, U and X read as one word.
- */
+/** "CRUX" as one logo: the chevron C sits on the baseline at capital height, with the R set tight against it. */
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
-    <span className={`inline-flex items-baseline leading-none font-bold ${className}`} aria-label="Crux">
-      <CruxMark className="mr-[0.03em] h-[0.76em] w-[0.76em] translate-y-[0.02em]" />
-      <span aria-hidden className="italic tracking-tight">
+    <span className={`${outfit.className} inline-flex items-baseline leading-none ${className}`} role="img" aria-label="Crux">
+      <CruxMark
+        className="shrink-0"
+        style={{
+          height: `${markHeight}em`,
+          width: `${markWidth}em`,
+          // Its bottom edge sits on the baseline; nudge it down by the overshoot.
+          transform: `translateY(${CAP_HEIGHT * OVERSHOOT}em)`,
+        }}
+      />
+      <span aria-hidden style={{ letterSpacing: "-0.04em", marginLeft: `${C_TO_R - R_LEFT_BEARING}em` }}>
         RUX
       </span>
     </span>
