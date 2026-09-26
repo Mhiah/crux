@@ -96,8 +96,12 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
       id,
       kind,
       title: c.text,
-      body: "",
-      meta: [c.category.replace(/_/g, " "), c.stance],
+      body: (c.quotes ?? []).map((q) => `“${q.text}” (${q.source_id})`).join("\n\n"),
+      meta: [
+        c.category.replace(/_/g, " "),
+        c.stance,
+        ...(c.unmatched_numbers?.length ? [`figures not in source: ${c.unmatched_numbers.join(", ")}`] : []),
+      ],
       restsOn: nonEmpty([{ label: "Sources", ids: c.source_ids }]),
       usedBy: citations(p, id),
     };

@@ -63,7 +63,9 @@ describe("runResearch", () => {
     const project = await runResearch(QUESTION, {
       reasoning: reasoningWith({
         thesis: (t) => ({ ...t, supporting_claim_ids: [...t.supporting_claim_ids, "C999"] }),
-        claims: (c) => ({ claims: [...c.claims, { text: "Invented", source_ids: ["S42"], category: "other", stance: "neutral" }] }),
+        claims: (c) => ({
+          claims: [...c.claims, { text: "Invented", quotes: [{ source_id: "S42", text: "a quote from a source that does not exist" }], category: "other", stance: "neutral" }],
+        }),
       }),
       search: new MockSearch(),
     });
@@ -73,7 +75,50 @@ describe("runResearch", () => {
     expect(project.research!.claims.some((c) => c.text === "Invented")).toBe(false);
     const warnings = project.audit.flatMap((a) => a.warnings);
     expect(warnings.some((w) => w.includes("C999"))).toBe(true);
-    expect(warnings.some((w) => w.includes("ungrounded"))).toBe(true);
+    expect(warnings.some((w) => w.includes("unknown source S42"))).toBe(true);
+    expect(warnings.some((w) => w.includes('Dropped claim "Invented'))).toBe(true);
+  });
+
+  it("fact-checks claims: keeps verified quotes, drops invented ones, flags unquoted figures", async () => {
+    const project = await runResearch(QUESTION, {
+      reasoning: reasoningWith({
+        claims: () => ({
+          claims: [
+            // Real quote from S1, plus a paraphrase passed off as a quote from S2: S2 is removed.
+            {
+              text: "Most small businesses still keep paper records.",
+              quotes: [
+                { source_id: "S1", text: "68% said they still keep records in paper ledgers or notebooks" },
+                { source_id: "S2", text: "most businesses keep paper records" },
+              ],
+              category: "market_demand",
+              stance: "supports",
+            },
+            // Fabricated quote: dropped entirely.
+            { text: "90% of SMEs want AI bookkeeping.", quotes: [{ source_id: "S1", text: "90% of SMEs said they want AI bookkeeping" }], category: "customers", stance: "supports" },
+            // Quote is real but the claim inflates the figure: kept and flagged.
+            { text: "80% of owners use a smartphone for business daily.", quotes: [{ source_id: "S1", text: "71% of owners use a smartphone for business daily" }], category: "adoption", stance: "supports" },
+            // An ellipsis skipping words and different case still verify.
+            { text: "Lenders reject loans over missing records.", quotes: [{ source_id: "S5", text: "LENDERS cite missing financial records … for rejecting small business loan applications" }], category: "customers", stance: "supports" },
+          ],
+        }),
+      }),
+      search: new MockSearch(),
+    });
+
+    expect(project.status).toBe("complete");
+    const claims = project.research!.claims;
+    expect(claims.map((c) => c.id)).toEqual(["C1", "C2", "C3"]);
+    expect(claims[0].source_ids).toEqual(["S1"]);
+    expect(claims.some((c) => c.text.startsWith("90%"))).toBe(false);
+    expect(claims[1].unmatched_numbers).toEqual(["80"]);
+    expect(claims[2].source_ids).toEqual(["S5"]);
+    expect(project.research!.fact_check).toEqual({ extracted: 4, dropped: 1, flagged: 1 });
+
+    const warnings = project.audit[0].warnings;
+    expect(warnings.some((w) => w.includes("isn't in S2's text"))).toBe(true);
+    expect(warnings.some((w) => w.includes('Dropped claim "90%'))).toBe(true);
+    expect(warnings.some((w) => w.includes("C2: figures 80"))).toBe(true);
   });
 
   it("marks assumptions the re-evaluation skipped as unresolved", async () => {

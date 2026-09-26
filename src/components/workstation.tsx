@@ -427,6 +427,7 @@ function Evidence({ project }: { project: ResearchProject }) {
 
   return (
     <Section id="evidence" title="Evidence" aside={`${r.claims.length} claims from ${r.sources.length} sources`}>
+      {r.fact_check && <FactCheckSummary check={r.fact_check} />}
       <div className="flex flex-wrap gap-2 print:hidden" role="group" aria-label="Filter claims by stance">
         {STANCES.map((s) => (
           <button
@@ -447,10 +448,19 @@ function Evidence({ project }: { project: ResearchProject }) {
             <Ref id={c.id} />
             <div className="flex-1">
               <p>{c.text}</p>
-              <p className="mt-1 flex flex-wrap items-center gap-2">
+              {c.quotes?.map((q, i) => (
+                <blockquote key={i} className="mt-1.5 border-l-2 border-line pl-2 text-muted">
+                  &ldquo;{q.text}&rdquo; <Ref id={q.source_id} />
+                </blockquote>
+              ))}
+              <p className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Badge tone={STANCE_TONE[c.stance]}>{c.stance === "supports" ? "for" : c.stance === "challenges" ? "against" : "neutral"}</Badge>
                 <span className="text-xs text-muted">{human(c.category)}</span>
-                <RefList ids={c.source_ids} />
+                {c.unmatched_numbers?.length > 0 && (
+                  <Badge tone="warn">figures not in source: {c.unmatched_numbers.join(", ")}</Badge>
+                )}
+                {/* Projects saved before fact checking have no quotes; show their sources instead. */}
+                {!c.quotes && <RefList ids={c.source_ids} />}
               </p>
             </div>
           </li>
@@ -483,6 +493,22 @@ function Evidence({ project }: { project: ResearchProject }) {
         </ul>
       </details>
     </Section>
+  );
+}
+
+function FactCheckSummary({ check }: { check: NonNullable<ResearchProject["research"]>["fact_check"] }) {
+  const { extracted, dropped, flagged } = check;
+  return (
+    <p className="mb-4 rounded-lg bg-surface px-3 py-2 text-sm">
+      <span className="font-medium">Fact-checked.</span>{" "}
+      <span className="text-muted">
+        Each claim below is matched to the exact words in its source.{" "}
+        {dropped > 0
+          ? `${dropped} of ${extracted} extracted claims were dropped because their quotes weren't in the source.`
+          : `All ${extracted} extracted claims passed.`}
+        {flagged > 0 && ` ${flagged} ${flagged === 1 ? "is" : "are"} flagged for figures their quote doesn't contain.`}
+      </span>
+    </p>
   );
 }
 
