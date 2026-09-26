@@ -4,8 +4,8 @@ import { notFound } from "next/navigation";
 import { Workstation } from "@/components/workstation";
 import { loadProject } from "@/lib/store";
 
-/** A saved run, reopened from disk. Invalid or unknown IDs are a 404. */
-const load = (id: string) => loadProject(id).catch(() => null);
+/** A saved run. Unknown or malformed IDs are a 404; a storage outage is an error, not a 404. */
+const load = (id: string) => loadProject(id);
 
 export async function generateMetadata(props: PageProps<"/research/[id]">): Promise<Metadata> {
   const project = await load((await props.params).id);

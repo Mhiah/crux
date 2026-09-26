@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { Badge, ConfidenceBadge, THESIS_TONE, type Tone } from "./badges";
 import { Linked, Ref, RefList, RefsProvider } from "./refs";
-import type { AssumptionVerdict, Challenge, Claim, Confidence, ResearchProject, Stage } from "@/lib/types";
+import type { AssumptionVerdict, Challenge, Claim, ResearchProject, Stage } from "@/lib/types";
 
 /**
  * The research workstation: the answer first, then how it was reached (what changed,
@@ -19,32 +20,12 @@ export const STAGES: { key: Stage; label: string }[] = [
   { key: "what_changed", label: "What changed" },
 ];
 
-type Tone = "good" | "warn" | "bad" | "neutral" | "info";
-
-const TONE: Record<Tone, string> = {
-  good: "bg-good-soft text-good",
-  warn: "bg-warn-soft text-warn",
-  bad: "bg-bad-soft text-bad",
-  info: "bg-info-soft text-info",
-  neutral: "bg-surface text-muted",
-};
-
-function Badge({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap ${TONE[tone]}`}>{children}</span>;
-}
-
 const VERDICT_TONE: Record<AssumptionVerdict, Tone> = { supported: "good", weakened: "warn", contradicted: "bad", unresolved: "neutral" };
-const THESIS_TONE = { strengthened: "good", survived: "good", weakened: "warn", overturned: "bad" } as const;
 const SEVERITY_TONE: Record<Challenge["severity"], Tone> = { minor: "neutral", major: "warn", critical: "bad" };
 const STANCE_TONE: Record<Claim["stance"], Tone> = { supports: "good", challenges: "bad", neutral: "neutral" };
-const CONFIDENCE_TONE: Record<Confidence, Tone> = { high: "good", medium: "warn", low: "bad" };
 const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 };
 
 const human = (s: string) => s.replace(/_/g, " ");
-
-function ConfidenceBadge({ level }: { level: Confidence }) {
-  return <Badge tone={CONFIDENCE_TONE[level]}>{level} confidence</Badge>;
-}
 
 function Section({ id, title, aside, children }: { id: string; title: string; aside?: ReactNode; children: ReactNode }) {
   return (

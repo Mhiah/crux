@@ -13,7 +13,7 @@ Question → Research → Thesis → Stress Test → Re-evaluate → Conclusion 
 | Phase | | Status |
 |---|---|---|
 | 1 | Reasoning engine: research → thesis → stress test → re-evaluation → conclusion | ✅ |
-| 2 | Evidence layer: Supabase storage, richer claim extraction and source metadata | — |
+| 2 | Evidence layer: Supabase storage, richer claim extraction and source metadata | storage ✅, rest — |
 | 3 | Product UI: research workstation with stage panels and streaming | ✅ |
 | 4 | What Changed: initial-vs-final comparison linked to evidence | ✅ |
 | 5 | Audit trail: conclusion → reasoning → claim → evidence → source | ✅ |
@@ -30,6 +30,8 @@ npm test
 npm run typecheck
 ```
 
+**Using Supabase (optional):** create a project at supabase.com, open **SQL Editor**, paste and run `supabase/migrations/20260926000000_projects.sql`, then add `SUPABASE_URL` and `SUPABASE_SECRET_KEY` (Project Settings → API Keys → secret key) to `.env.local` and restart. Hosting the app (e.g. on Vercel) needs this, because hosted servers don't keep files written to disk.
+
 Without API keys, everything runs on **mock fixtures** built around the plan's example question. Mock runs are labelled as such in the UI and CLI, and every mock source lives on `example.org`.
 
 ## How it works
@@ -38,6 +40,7 @@ Without API keys, everything runs on **mock fixtures** built around the plan's e
 - **Research** (`src/lib/research/collect.ts`): SERV plans the search queries, including ones aimed at evidence *against* the obvious answer. Tavily runs them, results are deduped into sources `S1…`, and SERV extracts claims `C1…`, each tied to its sources.
 - **Stages** (`src/lib/reasoning/stages.ts`): each stage cites records by ID: assumptions `A1…`, challenges `X1…`. The pipeline checks every citation, strips IDs that don't exist and logs a warning, so an audit-trail link can never dangle. Re-evaluation must judge every assumption; any it skips are marked `unresolved`.
 - **What Changed?** is *assembled* from the recorded stages, not generated, so each line is what the reasoning actually said, linked to its claims and challenges.
-- **API**: `POST /api/research` `{ question }` streams `PipelineEvent`s as NDJSON. `GET /api/research/:id` returns a saved project. Phase 1 stores projects as JSON in `.data/projects/`.
+- **API**: `POST /api/research` `{ question }` streams `PipelineEvent`s as NDJSON. `GET /api/research/:id` returns a saved project.
+- **Storage** (`src/lib/store.ts`): Supabase Postgres when `SUPABASE_URL` and `SUPABASE_SECRET_KEY` are set, JSON files in `.data/projects/` otherwise. Each project is one row in `projects` (full project as `jsonb`, plus the columns the past-runs list needs); row-level security is on and the public key has no access, so only the server can read or write.
 
 Code map: `src/components/workstation.tsx` (report UI) · `src/components/refs.tsx` (ID chips and audit-trail panel) · `src/lib/types.ts` (data model) · `src/lib/pipeline.ts` (orchestration) · `src/lib/reasoning/{prompts,schemas}.ts` (stage contracts) · `src/lib/mock/` (fixtures).
