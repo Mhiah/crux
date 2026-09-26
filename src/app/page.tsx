@@ -6,17 +6,12 @@ import { SiteHeader } from "@/components/site-header";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
-/** Tapping one fills the box; nothing runs (and no credits are spent) until you press the button. */
-const EXAMPLES = [
-  "Should we launch a stablecoin remittance app for the UK-Nigeria corridor?",
-  "Are small businesses actually willing to accept crypto payments?",
-  "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?",
-  "Should a Web3 startup issue its own token before product-market fit?",
-];
+/** Pre-filled so a demo is one click; nothing runs (and no credits are spent) until the button is pressed. */
+const DEMO_QUESTION = "Are small businesses actually willing to accept crypto payments?";
 
 /** Ask a question and watch the report fill in stage by stage as the pipeline streams. */
 export default function Home() {
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] = useState(DEMO_QUESTION);
   const [running, setRunning] = useState(false);
   const [active, setActive] = useState<Stage | null>(null);
   const [project, setProject] = useState<ResearchProject | null>(null);
@@ -93,10 +88,10 @@ export default function Home() {
         {header}
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
           <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
-            AI research that stress‑tests its conclusions.
+            AI research that stress tests its own conclusions.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
-            Using SERV Reasoning, Crux forms a thesis, stress-tests it against the evidence, and audits it.
+            Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it.
           </p>
 
           <form
@@ -106,10 +101,18 @@ export default function Home() {
               if (!tooShort) run();
             }}
           >
-            <input
-              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base focus:outline-none"
+            {/* A textarea so a long question wraps on phones instead of being cut off; Enter still submits. */}
+            <textarea
+              rows={1}
+              className="min-w-0 flex-1 resize-none bg-transparent px-3 py-3 text-base leading-snug [field-sizing:content] focus:outline-none max-sm:min-h-[4.5rem]"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!tooShort) run();
+                }
+              }}
               placeholder="Ask a hard business question…"
               aria-label="Your question"
               maxLength={500}
@@ -120,23 +123,6 @@ export default function Home() {
           </form>
 
           {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
-
-          <div className="mt-8">
-            <p className="text-center text-xs font-medium uppercase tracking-wider text-muted">Try one</p>
-            <ul className="mt-3 flex flex-wrap justify-center gap-2">
-              {EXAMPLES.map((q) => (
-                <li key={q}>
-                  <button
-                    type="button"
-                    onClick={() => setQuestion(q)}
-                    className="rounded-full border border-line px-3.5 py-2 text-left text-sm text-muted transition hover:border-foreground/30 hover:text-foreground"
-                  >
-                    {q}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
         </main>
       </>
     );

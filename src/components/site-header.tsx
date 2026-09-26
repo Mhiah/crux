@@ -12,7 +12,7 @@ import { ThemeToggle } from "./theme-toggle";
 export function SiteHeader({ onHome, homeDisabled = false, children }: { onHome?: () => void; homeDisabled?: boolean; children?: ReactNode }) {
   const logo = <Wordmark className="text-7xl" />;
   return (
-    <header className="mx-auto flex w-full max-w-5xl items-center gap-2 px-5 py-4 print:hidden">
+    <header className="flex w-full items-center gap-2 px-5 py-4 sm:px-8 print:hidden">
       {onHome ? (
         <button type="button" onClick={onHome} disabled={homeDisabled} className="rounded-md">
           {logo}
