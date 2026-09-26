@@ -168,12 +168,12 @@ export function Workstation({ project, downloadable = true }: { project: Researc
                   type="button"
                   aria-current={view === v.key ? "page" : undefined}
                   onClick={() => go(v.key)}
-                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition max-[359px]:px-2.5 sm:px-3.5 ${
                     view === v.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
                   }`}
                 >
                   {v.label}
-                  {v.key === "evidence" && project.research ? <span className="ml-1 opacity-60">{project.research.claims.length}</span> : null}
+                  {v.key === "evidence" && project.research ? <span className="ml-1 opacity-60 max-[359px]:hidden">{project.research.claims.length}</span> : null}
                 </button>
               ))}
             </nav>
@@ -232,9 +232,14 @@ function Downloads({ project }: { project: ResearchProject }) {
         type="button"
         onClick={downloadPdf}
         disabled={busy}
-        className="rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground disabled:opacity-60"
+        aria-label="Download PDF"
+        className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground disabled:opacity-60 sm:px-3"
       >
-        {busy ? "Preparing…" : "Download"}
+        {/* Icon only on phones, where the tabs leave no room for the word. */}
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px] sm:hidden" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+        </svg>
+        <span className={busy ? "" : "hidden sm:inline"}>{busy ? "Preparing…" : "Download"}</span>
       </button>
     </div>
   );

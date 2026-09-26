@@ -75,7 +75,7 @@ export default function Home() {
     <SiteHeader onHome={newQuestion} homeDisabled={running}>
       {project && !running && (
         <button type="button" onClick={newQuestion} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
-          New question
+          New<span className="max-[359px]:hidden"> question</span>
         </button>
       )}
     </SiteHeader>
@@ -131,7 +131,7 @@ export default function Home() {
   return (
     <>
       {header}
-      <main className="mx-auto w-full max-w-4xl px-5 pb-16">
+      <main className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:pt-12">
         <h1 className="text-2xl font-semibold leading-snug tracking-tight print:hidden">{question}</h1>
 
         {mode === "mock" && (
