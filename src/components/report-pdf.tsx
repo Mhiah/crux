@@ -110,7 +110,7 @@ const date = (iso: string) =>
 
 export function ReportDocument({ project }: { project: ResearchProject }) {
   const { thesis: t, stress_test: st, reevaluation: re, conclusion: c, what_changed: wc, research: r } = project;
-  const assumptionText = (id: string) => t?.assumptions.find((a) => a.id === id)?.text ?? "";
+  const assumptionText = (id: string) => stripRefs(t?.assumptions.find((a) => a.id === id)?.text ?? "");
   const sourceNumber = new Map(r?.sources.map((src, i) => [src.id, i + 1]));
   const footer = <Footer question={project.question} />;
 
@@ -221,7 +221,7 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
               return (
                 <Card key={a.id}>
                   <View style={[s.row, { alignItems: "flex-start" }]}>
-                    <Text style={[s.col, { fontWeight: 600 }]}>{a.text}</Text>
+                    <Text style={[s.col, { fontWeight: 600 }]}>{stripRefs(a.text)}</Text>
                     {v && <Pill tone={VERDICT_TONE[v.verdict]}>{v.verdict}</Pill>}
                   </View>
                   {v && <Text style={[s.muted, { marginTop: 4 }]}>{stripRefs(v.reasoning)}</Text>}
@@ -268,10 +268,10 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
           )}
           {r.claims.map((claim) => (
             <Card key={claim.id}>
-              <Text style={{ fontWeight: 600 }}>{claim.text}</Text>
+              <Text style={{ fontWeight: 600 }}>{stripRefs(claim.text)}</Text>
               {(claim.quotes ?? []).map((q, i) => (
                 <Text key={i} style={s.quote}>
-                  “{q.text}” — source {sourceNumber.get(q.source_id) ?? "?"}
+                  “{q.text}” (source {sourceNumber.get(q.source_id) ?? "?"})
                 </Text>
               ))}
               <Text style={[s.small, { marginTop: 4 }]}>

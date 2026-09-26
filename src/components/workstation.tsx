@@ -368,7 +368,7 @@ function ReasoningView({ project }: { project: ResearchProject }) {
   const st = project.stress_test;
   const re = project.reevaluation;
   if (!t) return <Waiting>The reasoning appears here as soon as the first thesis is formed.</Waiting>;
-  const assumptionText = (id: string) => t.assumptions.find((a) => a.id === id)?.text ?? "";
+  const assumptionText = (id: string) => stripRefs(t.assumptions.find((a) => a.id === id)?.text ?? "");
 
   return (
     <div className="space-y-10">
@@ -420,12 +420,12 @@ function ReasoningView({ project }: { project: ResearchProject }) {
             return (
               <li key={a.id} className="p-4">
                 <div className="flex items-start gap-3">
-                  <p className="flex-1 text-sm font-medium leading-relaxed">{a.text}</p>
+                  <p className="flex-1 text-sm font-medium leading-relaxed">{stripRefs(a.text)}</p>
                   {verdict && <Badge tone={VERDICT_TONE[verdict.verdict]}>{verdict.verdict}</Badge>}
                 </div>
                 {verdict && <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(verdict.reasoning)}</p>}
                 <div className="mt-3">
-                  <EvidenceLink label={`“${a.text}”`} ids={[a.id, ...(verdict?.challenge_ids ?? [])]} text={verdict?.reasoning} />
+                  <EvidenceLink label={`“${stripRefs(a.text)}”`} ids={[a.id, ...(verdict?.challenge_ids ?? [])]} text={verdict?.reasoning} />
                 </div>
               </li>
             );
@@ -552,7 +552,7 @@ function EvidenceView({ project, focus, clearFocus }: { project: ResearchProject
           {r.claims.map((c) => (
             <li key={c.id} className={shown(c) ? "block" : "hidden print:block"}>
               <Card>
-                <p className="text-sm font-medium leading-relaxed">{c.text}</p>
+                <p className="text-sm font-medium leading-relaxed">{stripRefs(c.text)}</p>
                 {c.quotes?.map((q, i) => {
                   const s = sourceById.get(q.source_id);
                   return (

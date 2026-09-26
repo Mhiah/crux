@@ -8,7 +8,7 @@ import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
 /** Tapping one fills the box; nothing runs (and no credits are spent) until you press the button. */
 const EXAMPLES = [
-  "Should we launch a stablecoin remittance app for the UK–Nigeria corridor?",
+  "Should we launch a stablecoin remittance app for the UK-Nigeria corridor?",
   "Are small businesses actually willing to accept crypto payments?",
   "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?",
   "Should a Web3 startup issue its own token before product-market fit?",
@@ -93,7 +93,7 @@ export default function Home() {
         {header}
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
           <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
-            AI research that stress-tests its conclusions.
+            AI research that stress‑tests its conclusions.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
             Using SERV Reasoning, Crux forms a thesis, stress-tests it against the evidence, and audits it.
@@ -166,7 +166,7 @@ export default function Home() {
             <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
               Saved report
             </Link>{" "}
-            <span className="text-muted">— reopen or share this run later.</span>
+            <span className="text-muted">(reopen or share this run later)</span>
           </p>
         )}
 

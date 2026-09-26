@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crux — AI research that stress-tests its conclusions",
+  title: "Crux | AI research that stress-tests its conclusions",
   description: "Using SERV Reasoning, Crux forms a thesis, stress-tests it against the evidence, and audits it.",
 };
 

@@ -14,9 +14,21 @@ export function refsIn(text: string): string[] {
   return [...new Set(text.match(new RegExp(`\\b${ID}\\b`, "g")) ?? [])];
 }
 
+/**
+ * No em dashes in what we show: a dash used as punctuation becomes a comma, and an en dash
+ * inside a range or compound ("3–4", "UK–Nigeria") becomes a plain hyphen.
+ */
+export function stripDashes(text: string): string {
+  return text
+    .replace(/(\S)–(\S)/g, "$1-$2")
+    .replace(/\s*[—―]\s*|\s+[–-]\s+/g, ", ")
+    .replace(/,\s*([,.;:!?)])/g, "$1")
+    .replace(/^[,\s]+/, "");
+}
+
 export function stripRefs(text: string): string {
   return (
-    text
+    stripDashes(text)
       // "(C1, C2 and C11)", "[X3]", "(see C4)"
       .replace(new RegExp(`\\s*[([]\\s*(?:see|e\\.g\\.,?|per|via|cf\\.)?\\s*${LIST}\\s*[)\\]]`, "gi"), "")
       // "Assumption A2 fails" → "This assumption fails"; "claims C3 and C4" → "these claims"
