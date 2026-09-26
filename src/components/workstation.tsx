@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from "react";
 import { Linked, Ref, RefList, RefsProvider } from "./refs";
-import type { AssumptionVerdict, Challenge, Claim, Confidence, ResearchProject, Stage } from "@/lib/types";
+import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
+import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type ResearchProject, type Source, type Stage } from "@/lib/types";
 
 /**
  * The research workstation: the answer first, then how it was reached (what changed,
@@ -428,6 +429,7 @@ function Evidence({ project }: { project: ResearchProject }) {
   return (
     <Section id="evidence" title="Evidence" aside={`${r.claims.length} claims from ${r.sources.length} sources`}>
       {r.fact_check && <FactCheckSummary check={r.fact_check} />}
+      <SourceMix sources={r.sources} />
       <div className="flex flex-wrap gap-2 print:hidden" role="group" aria-label="Filter claims by stance">
         {STANCES.map((s) => (
           <button
@@ -456,6 +458,7 @@ function Evidence({ project }: { project: ResearchProject }) {
               <p className="mt-1.5 flex flex-wrap items-center gap-2">
                 <Badge tone={STANCE_TONE[c.stance]}>{c.stance === "supports" ? "for" : c.stance === "challenges" ? "against" : "neutral"}</Badge>
                 <span className="text-xs text-muted">{human(c.category)}</span>
+                {r.sources.every((s) => s.flags) && weakOnly(c, r.sources) && <Badge tone="warn">weak sources only</Badge>}
                 {c.unmatched_numbers?.length > 0 && (
                   <Badge tone="warn">figures not in source: {c.unmatched_numbers.join(", ")}</Badge>
                 )}
@@ -479,6 +482,16 @@ function Evidence({ project }: { project: ResearchProject }) {
               <p className="mt-0.5 truncate text-xs text-muted">
                 {[s.publisher, s.published_date].filter(Boolean).join(" · ")}
               </p>
+              {s.kind && (
+                <p className="mt-1 flex flex-wrap gap-1">
+                  <Badge tone="neutral">{SOURCE_KIND_LABEL[s.kind]}</Badge>
+                  {s.flags.map((f) => (
+                    <Badge key={f} tone="warn">
+                      {f}
+                    </Badge>
+                  ))}
+                </p>
+              )}
             </div>
           </li>
         ))}
@@ -493,6 +506,21 @@ function Evidence({ project }: { project: ResearchProject }) {
         </ul>
       </details>
     </Section>
+  );
+}
+
+const KIND_ORDER: SourceKind[] = ["research", "government", "industry_report", "news", "reference", "company_or_blog", "social", "mock"];
+
+/** What the evidence is built on: how many sources of each type, and how many are weak. */
+function SourceMix({ sources }: { sources: Source[] }) {
+  if (!sources.every((s) => s.kind)) return null; // saved before source labels existed
+  const counts = KIND_ORDER.map((k) => [k, sources.filter((s) => s.kind === k).length] as const).filter(([, n]) => n > 0);
+  const weak = sources.filter((s) => s.flags.length > 0).length;
+  return (
+    <p className="mb-4 text-sm text-muted">
+      <span className="font-medium text-foreground">Sources:</span> {counts.map(([k, n]) => `${n} ${SOURCE_KIND_LABEL[k]}`).join(" · ")}
+      {weak > 0 && <span className="text-warn"> · {weak} flagged as weak</span>}
+    </p>
   );
 }
 

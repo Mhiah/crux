@@ -1,3 +1,5 @@
+import type { SourceKind } from "./research/sources";
+
 /**
  * Domain model for a research run. Mirrors the build plan's data model:
  * ResearchProject → Source → Claim → Thesis → StressTest → Reevaluation → Conclusion,
@@ -17,7 +19,15 @@ export type Source = {
   published_date: string | null;
   excerpt: string;
   relevance: number; // 0..1, from the search provider
+  /** Publisher type, judged from the web address. */
+  kind: SourceKind;
+  /** Why this is weak evidence (social post, out of date); empty when it isn't. */
+  flags: string[];
 };
+
+/** A claim resting only on flagged sources is weak evidence, however it's worded. */
+export const weakOnly = (claim: Claim, sources: Source[]) =>
+  claim.source_ids.length > 0 && claim.source_ids.every((id) => (sources.find((s) => s.id === id)?.flags ?? []).length > 0);
 
 export type ClaimCategory =
   | "market_demand"

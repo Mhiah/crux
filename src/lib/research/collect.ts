@@ -3,6 +3,7 @@ import { CLAIMS_SCHEMA, QUERY_PLAN_SCHEMA } from "../reasoning/schemas";
 import { QUERY_PLAN_SYSTEM, CLAIMS_SYSTEM, formatSources } from "../reasoning/prompts";
 import type { Claim, Research, Source } from "../types";
 import type { SearchProvider } from "./search";
+import { classifySource, sourceFlags } from "./sources";
 import { quoteFound, unmatchedNumbers } from "./verify";
 
 const RESULTS_PER_QUERY = 5;
@@ -51,6 +52,7 @@ export async function collectResearch(
     for (const hit of r.value) {
       const existing = byUrl.get(hit.url);
       if (existing && existing.relevance >= hit.score) continue;
+      const kind = classifySource(hit.url);
       byUrl.set(hit.url, {
         url: hit.url,
         title: hit.title,
@@ -58,13 +60,16 @@ export async function collectResearch(
         published_date: hit.published_date,
         excerpt: hit.content.slice(0, MAX_EXCERPT_CHARS),
         relevance: hit.score,
+        kind,
+        flags: sourceFlags(kind, hit.published_date),
       });
     }
   });
   if (byUrl.size === 0) throw new Error("Research found no sources. Check the search provider and try a different question.");
 
   const sources: Source[] = [...byUrl.values()]
-    .sort((a, b) => b.relevance - a.relevance)
+    // Weak sources (social posts, stale pages) only fill slots the rest leave open.
+    .sort((a, b) => Number(a.flags.length > 0) - Number(b.flags.length > 0) || b.relevance - a.relevance)
     .slice(0, MAX_SOURCES)
     .map((s, i) => ({ id: `S${i + 1}`, ...s }));
   const byId = new Map(sources.map((s) => [s.id, s]));
