@@ -1,43 +1,97 @@
 # Crux
 
-An AI research engine that forms a thesis, stress-tests it with **SERV Reasoning**, re-evaluates the evidence, and shows exactly how it reached its conclusion.
+**AI research that stress tests its own conclusions.**
+
+Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. Ask a hard market or strategy question and Crux researches it, commits to a first answer, stress tests it like a skeptical investor would, and shows you exactly what changed and why, with every fact traceable to the exact words in its source.
 
 ```
-Question → Research → Thesis → Stress Test → Re-evaluate → Conclusion → What Changed? + Audit Trail
+Question → Research → Thesis → Stress test → Re-evaluate → Conclusion → What changed + Audit trail
 ```
 
-## Status
+## What it does
 
-**Phases 1 and 3: reasoning engine and research workstation.** The full pipeline runs end to end. At `/` you ask a question and the report fills in stage by stage; `/research/:id` reopens a saved run. Every record ID in the report (S3, C7, A2, X1), including IDs SERV cites inline, opens its audit trail: what it rests on and what relies on it.
+1. **Researches** the question on the web (Tavily). SERV plans two sets of searches: ones looking for evidence that the answer is yes, and ones hunting for evidence that it's no (failures, low adoption, critics, costs, regulation).
+2. **Extracts facts with proof.** SERV pulls out specific, checkable facts, and each one must quote the exact words from its source. Crux checks every quote against the source text and drops facts it can't find.
+3. **Forms a first answer** (the thesis) and names the assumptions it depends on.
+4. **Stress tests it:** SERV looks for weak assumptions, contradicting evidence, alternative explanations, risks and missing evidence.
+5. **Re-evaluates** each assumption: supported, weakened, contradicted or unresolved.
+6. **Concludes** with the best-supported answer, its confidence, what remains uncertain, and cheap next steps to find out.
+7. **Shows what changed** between the first answer and the final one, and why.
 
-| Phase | | Status |
-|---|---|---|
-| 1 | Reasoning engine: research → thesis → stress test → re-evaluation → conclusion | ✅ |
-| 2 | Evidence layer: fact-checked claims, source quality | ✅ |
-| 3 | Product UI: research workstation with stage panels and streaming | ✅ |
-| 4 | What Changed: initial-vs-final comparison linked to evidence | ✅ |
-| 5 | Audit trail: conclusion → reasoning → claim → evidence → source | ✅ |
-| 6 | Demo polish | — |
+## Using it
+
+- **Ask a question** on the home page. For a demo, the example question is shown faintly in the box: press **→** (or Tab) on a computer, or tap the box on a phone, to fill it in.
+- **Read the report** in three views:
+  - **Answer:** the conclusion, what changed and why, next steps, and what's still uncertain.
+  - **Reasoning:** the first answer, the stress test (most serious challenges first), and every assumption with its verdict.
+  - **Evidence:** every fact with its source quote, the fact-check summary, and the sources labelled by type.
+- **Follow the proof:** anything backed by facts has an **Evidence** link that opens just those facts. Each fact's **Where it's used** button shows the audit trail.
+- **Download** the report as a PDF, straight to your device.
+- Switch **light / dark** with the toggle at the top right. The **Home** button at the bottom right returns to the start.
 
 ## Running it
 
+You need [Node.js](https://nodejs.org) 22 or newer.
+
 ```bash
 npm install
-cp .env.example .env.local   # add SERV_API_KEY and TAVILY_API_KEY for live runs
-npm run dev                  # http://localhost:3000
-npm run research -- "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?"   # CLI
-npm test
-npm run typecheck
+cp .env.example .env.local   # then add SERV_API_KEY and TAVILY_API_KEY
+npm run dev                  # open http://localhost:3000
 ```
 
-Without API keys, everything runs on **mock fixtures** built around the plan's example question. Mock runs are labelled as such in the UI and CLI, and every mock source lives on `example.org`.
+**Mock mode** runs the whole app on built-in sample data, with no SERV or Tavily calls and no cost. It's used automatically when the keys are missing, or you can force it:
+
+```bash
+CRUX_MOCK=1 npm run dev                    # macOS / Linux
+$env:CRUX_MOCK="1"; npm run dev            # Windows PowerShell
+```
+
+Mock runs always show the same sample report (about AI bookkeeping for Nigerian SMEs), whatever you ask, and are labelled as mock.
+
+**Live mode** uses your keys. Each question makes about 6 SERV calls and 8 Tavily searches and takes 1 to 2 minutes. On Windows, clear mock mode first with `Remove-Item Env:CRUX_MOCK`, or open a new PowerShell window.
+
+**On a phone:** keep the app running on your computer, connect the phone to the same Wi-Fi, and open the **Network** address that `npm run dev` prints (for example `http://192.168.0.3:3000`).
+
+Other commands:
+
+```bash
+npm run research -- "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?"   # run from the terminal
+npm test            # unit tests
+npm run typecheck
+npm run lint
+npm run build
+```
 
 ## How it works
 
-- **SERV Reasoning** (`src/lib/reasoning/serv.ts`) is OpenAI-compatible. Every reasoning step is a chat completion with a strict JSON schema and SERV's server-side `serv_prompt_guard` (the stages read untrusted web excerpts). `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check on each stage. The guard intermittently blocks harmless requests, so a block (a refusal that used no tokens) is retried up to twice; a refusal from the model itself is not.
-- **Research** (`src/lib/research/collect.ts`): SERV plans the search queries, including ones aimed at evidence *against* the obvious answer. Tavily runs them, results are deduped into sources `S1…`, and SERV extracts claims `C1…`, each tied to its sources. **Fact check** (`src/lib/research/verify.ts`, plain code, no extra calls): every claim must quote the exact source words it rests on. A source only counts if its quote is actually in that source's text, a claim with no quote found is dropped, and figures a claim states that its quotes don't contain are flagged (and passed on to the later stages as unverified). **Source quality** (`src/lib/research/sources.ts`, also plain code): each source is labelled by type from its web address (research, government/official, industry report, news, reference, company/blog, social/forum), and social posts and sources over three years old are flagged as weak. Weak sources only fill slots the others leave open, and claims resting only on them are marked as weak evidence for the later stages and in the report.
-- **Stages** (`src/lib/reasoning/stages.ts`): each stage cites records by ID: assumptions `A1…`, challenges `X1…`. The pipeline checks every citation, strips IDs that don't exist and logs a warning, so an audit-trail link can never dangle. Re-evaluation must judge every assumption; any it skips are marked `unresolved`.
-- **What Changed?** is *assembled* from the recorded stages, not generated, so each line is what the reasoning actually said, linked to its claims and challenges.
-- **API**: `POST /api/research` `{ question }` streams `PipelineEvent`s as NDJSON. `GET /api/research/:id` returns a saved project. Phase 1 stores projects as JSON in `.data/projects/`.
+- **SERV Reasoning** (`src/lib/reasoning/serv.ts`) is OpenAI-compatible. Every reasoning step is a chat completion with a strict JSON schema and SERV's `serv_prompt_guard`, because the stages read untrusted web text. The guard sometimes blocks harmless requests, so a block (a refusal that used no tokens) is retried up to twice; a refusal from the model itself is not. `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check on each stage.
+- **Balanced research** (`src/lib/research/collect.ts`): SERV writes 2 to 4 supporting and 3 to 4 challenging searches, which run interleaved. Sources are picked search by search in turn, so the challenging searches' results aren't crowded out, and weak sources only fill spare slots. If no evidence against the answer survives, the later stages are told it's a gap in the research, not confirmation, and the Evidence view says so.
+- **Fact check** (`src/lib/research/verify.ts`, plain code, no extra calls): a source only backs a fact if the fact's quote is found in that source's text. Facts with no quote found are dropped, and figures a fact states that its quote doesn't contain are flagged and passed on as unverified.
+- **Source quality** (`src/lib/research/sources.ts`): sources are labelled research, government / official, industry report, news, reference, company / blog, or social / forum. Known sites are recognised by address; for anything else, SERV labels the publisher while it extracts facts. Social posts and sources over three years old are flagged as weak.
+- **Stages** (`src/lib/reasoning/stages.ts`) cite records by ID (sources `S1`, facts `C1`, assumptions `A1`, challenges `X1`). Every citation is checked and unknown IDs are removed, so an audit-trail link never dangles. The reading views hide the IDs and turn them into Evidence links (`src/lib/plain.ts`).
+- **What changed** is assembled from the recorded stages, not generated, so each line is what the reasoning actually said.
+- **API:** `POST /api/research` with `{ "question": "…" }` streams the pipeline as NDJSON; `GET /api/research/:id` returns a saved run. Runs are saved as JSON in `.data/projects/` on the machine running the app, and reopen at `/research/:id`.
+- **PDF** (`src/components/report-pdf.tsx`) is built in the browser with react-pdf. Inter is embedded (SIL Open Font License) because the standard PDF fonts can't draw ₦.
 
-Code map: `src/components/workstation.tsx` (report UI) · `src/components/refs.tsx` (ID chips and audit-trail panel) · `src/lib/types.ts` (data model) · `src/lib/pipeline.ts` (orchestration) · `src/lib/reasoning/{prompts,schemas}.ts` (stage contracts) · `src/lib/mock/` (fixtures).
+## Project map
+
+| Path | What's there |
+|---|---|
+| `src/app/` | Pages: landing and live results (`page.tsx`), saved reports (`research/[id]`), the API routes |
+| `src/components/` | Report views (`workstation.tsx`), PDF (`report-pdf.tsx`), audit-trail panel (`refs.tsx`), logo (`brand.tsx`), header, theme toggle |
+| `src/lib/pipeline.ts` | Runs the stages in order and records the audit trail |
+| `src/lib/reasoning/` | SERV client, prompts, strict schemas, stages |
+| `src/lib/research/` | Search, source selection, fact checking, source labels |
+| `src/lib/mock/` | Sample data for mock mode |
+| `tests/` | Unit tests (Vitest) |
+
+## Status
+
+| Phase | | Status |
+|---|---|---|
+| 1 | Reasoning engine: research, thesis, stress test, re-evaluation, conclusion | ✅ |
+| 2 | Evidence layer: fact-checked claims, source quality, balanced research | ✅ |
+| 3 | Product UI: landing page and results in Answer / Reasoning / Evidence views | ✅ |
+| 4 | What changed: first answer vs final, with the reasons and evidence behind each change | ✅ |
+| 5 | Audit trail: from the answer to the reasoning, facts, quotes and sources | ✅ |
+| 6 | Demo polish: branding, light / dark, PDF download, mobile, one-tap demo question | ✅ |
