@@ -1,3 +1,5 @@
+import { SERV_SOURCE_KINDS } from "../research/sources";
+
 /**
  * Strict JSON schemas for each SERV call. Strict mode requires every property to be
  * listed in `required` and `additionalProperties: false`, so objects go through `obj`.
@@ -44,7 +46,11 @@ const CLAIM_CATEGORIES = [
 export const QUERY_PLAN_SCHEMA = schema(
   "query_plan",
   obj({
-    queries: arr(str(), "4-8 distinct web search queries covering demand, customers, competitors, pricing, adoption, trends, regulation and risks. Include queries likely to surface evidence AGAINST the obvious answer."),
+    supporting_queries: arr(str(), "2-4 distinct web search queries for evidence that the answer is YES: demand, customers, adoption, growth, pricing that works."),
+    challenging_queries: arr(
+      str(),
+      "3-4 distinct web search queries for evidence that the answer is NO: failures and shutdowns, low or falling adoption, complaints and critics, costs and risks, regulation that blocks it, cheaper alternatives. Phrase them to find that evidence, not to confirm the idea.",
+    ),
   }),
 );
 
@@ -64,6 +70,16 @@ export const CLAIMS_SCHEMA = schema(
         category: strEnum(CLAIM_CATEGORIES),
         stance: strEnum(["supports", "challenges", "neutral"], "Relative to answering the research question 'yes'."),
       }),
+    ),
+    sources: arr(
+      obj({
+        source_id: str("A source ID from the input (e.g. S3)."),
+        kind: strEnum(
+          SERV_SOURCE_KINDS,
+          "The publisher's type: research (academic or independent research), government (regulators, central banks, public bodies, multilaterals), industry_report (market research, consultancies, analytics firms), news (newsrooms and trade press), reference (encyclopedias, explainers), company_or_blog (a company's own site, product pages, vendor blogs), social (social media, forums, user-generated posts).",
+        ),
+      }),
+      "The publisher type of every source in the input, one entry each.",
     ),
   }),
 );

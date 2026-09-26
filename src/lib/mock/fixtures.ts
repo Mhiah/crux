@@ -73,13 +73,15 @@ export const MOCK_SEARCH_RESULTS: SearchResult[] = [
 ];
 
 export const MOCK_QUERY_PLAN = {
-  queries: [
+  supporting_queries: [
     "Nigeria SME bookkeeping record keeping survey",
     "Nigeria tax reform e-invoicing small business digital records",
-    "Nigeria SME accounting software competitors fintech bundled bookkeeping",
-    "micro business software willingness to pay Nigeria",
     "SME loan rejection financial records Nigeria",
-    "AI adoption trust small businesses Africa",
+  ],
+  challenging_queries: [
+    "free bookkeeping in POS and payments apps Nigeria competition",
+    "micro business software low willingness to pay Nigeria",
+    "small businesses distrust AI finance tools Africa",
   ],
 };
 
