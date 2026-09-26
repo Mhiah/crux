@@ -15,6 +15,19 @@ const MAX_EXCERPT_CHARS = 2500;
 export type CollectResult = { research: Research; models: string[]; warnings: string[] };
 
 type RawClaim = Pick<Claim, "text" | "category" | "stance" | "quotes">;
+/**
+ * Models sometimes wrap a claim in quotation marks, or open a quote inside it and never close
+ * it ('The source says that "34% of ...'). The claim is a plain statement; the source's own
+ * words live in its quotes, so stray quotation marks are removed.
+ */
+export function cleanClaimText(text: string): string {
+  let t = text.trim().replace(/^["“”]+|["“”]+$/g, "").trim();
+  const straight = (t.match(/"/g) ?? []).length;
+  const curlyOpen = (t.match(/“/g) ?? []).length, curlyClose = (t.match(/”/g) ?? []).length;
+  if (straight % 2 === 1 || curlyOpen !== curlyClose) t = t.replace(/["“”]/g, "");
+  return t.replace(/\s{2,}/g, " ").trim();
+}
+
 type QueryPlan = { supporting_queries?: string[]; challenging_queries?: string[]; queries?: string[] };
 
 /**
@@ -127,8 +140,7 @@ export async function collectResearch(
   const claims: Claim[] = [];
   let dropped = 0;
   for (const raw of extracted.output.claims) {
-    // Models sometimes wrap a claim in quotation marks; the claim is ours, the quotes hold the source's words.
-    const c = { ...raw, text: raw.text.trim().replace(/^["“”']+|["“”']+$/g, "").trim() };
+    const c = { ...raw, text: cleanClaimText(raw.text) };
     const label = `"${c.text.slice(0, 60)}…"`;
     const quotes: Claim["quotes"] = [];
     for (const q of c.quotes ?? []) {

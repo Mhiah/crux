@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatClaims, formatEvidence } from "../src/lib/reasoning/prompts";
-import { collectResearch } from "../src/lib/research/collect";
+import { cleanClaimText, collectResearch } from "../src/lib/research/collect";
 import type { SearchProvider, SearchResult } from "../src/lib/research/search";
 import { classifySource, sourceFlags } from "../src/lib/research/sources";
 import type { ReasoningProvider, ReasonRequest } from "../src/lib/reasoning/provider";
@@ -173,5 +173,17 @@ describe("claim cleanup", () => {
     expect(classifySource("https://bankingjournal.aba.com/2025/x")).toBe("news");
     expect(classifySource("https://www.credenceresearch.com/report/x")).toBe("industry_report");
     expect(classifySource("https://coinmarketcap.com/academy/x")).toBe("reference");
+  });
+});
+
+describe("cleanClaimText", () => {
+  it("removes stray quotation marks a model leaves in a claim, and keeps balanced ones", () => {
+    // From a live run.
+    expect(cleanClaimText('The source says that "the primary reason small businesses accept crypto is customer demand.')).toBe(
+      "The source says that the primary reason small businesses accept crypto is customer demand.",
+    );
+    expect(cleanClaimText('"33% of merchants would accept crypto."')).toBe("33% of merchants would accept crypto.");
+    expect(cleanClaimText("“Nearly 4 in 10 merchants accept crypto.")).toBe("Nearly 4 in 10 merchants accept crypto.");
+    expect(cleanClaimText('The report calls crypto a "niche" payment method.')).toBe('The report calls crypto a "niche" payment method.');
   });
 });

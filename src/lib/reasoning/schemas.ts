@@ -59,7 +59,7 @@ export const CLAIMS_SCHEMA = schema(
   obj({
     claims: arr(
       obj({
-        text: str("One specific, checkable factual claim stated in the source excerpts. Include numbers and dates when the source gives them. No opinions of your own."),
+        text: str("One specific, checkable factual claim stated in the source excerpts, written as a plain statement in your own words (\"34% of small businesses accept crypto\", not \"The source says that ...\"). No quotation marks: the source's exact words go in quotes. Include numbers and dates when the source gives them. No opinions of your own."),
         quotes: arr(
           obj({
             source_id: str("The ID of the source this quote comes from (e.g. S3). Only use IDs that appear in the input."),
