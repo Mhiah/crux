@@ -3,18 +3,16 @@
 import Link from "next/link";
 
 /**
- * Floating "Home" button in the bottom-right corner of result pages, back to the landing
- * page. A link by default, or `onHome` when the home page needs to reset its own state.
+ * A small "— HOME" link in the bottom-right corner of result pages, back to the landing page.
+ * A link by default, or `onHome` when the home page needs to reset its own state.
  */
 export function HomeButton({ onHome }: { onHome?: () => void }) {
   const className =
-    "fixed right-4 bottom-4 z-20 flex items-center gap-2 rounded-full bg-foreground px-4 py-3 text-sm font-medium text-background shadow-lg transition hover:opacity-90 sm:right-6 sm:bottom-6 print:hidden";
+    "fixed right-4 bottom-4 z-20 flex items-center gap-2 rounded-full bg-background/90 px-3 py-2 text-[11px] font-medium tracking-[0.2em] text-muted backdrop-blur transition hover:text-foreground sm:right-6 sm:bottom-6 print:hidden";
   const content = (
     <>
-      <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5" />
-      </svg>
-      Home
+      <span aria-hidden className="h-px w-4 bg-current" />
+      HOME
     </>
   );
   return onHome ? (
