@@ -10,7 +10,7 @@ import { ThemeToggle } from "./theme-toggle";
  * a link by default, or `onHome` when the home page needs to reset its own state.
  */
 export function SiteHeader({ onHome, homeDisabled = false, children }: { onHome?: () => void; homeDisabled?: boolean; children?: ReactNode }) {
-  const logo = <Wordmark className="text-7xl" />;
+  const logo = <Wordmark className="text-7xl max-[359px]:text-5xl" />;
   return (
     <header className="flex w-full items-center gap-2 px-5 py-4 sm:px-8 print:hidden">
       {onHome ? (

@@ -19,7 +19,7 @@ export default async function ResearchPage(props: PageProps<"/research/[id]">) {
   return (
     <>
       <SiteHeader />
-      <main className="mx-auto w-full max-w-4xl px-5 pb-16">
+      <main className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:pt-12">
         <h1 className="text-2xl font-semibold leading-snug tracking-tight print:hidden">{project.question}</h1>
         <p className="mt-1 text-sm text-muted print:hidden">
           {new Date(project.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
