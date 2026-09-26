@@ -64,11 +64,11 @@ export default function Home() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Crux</h1>
-      <p className="mt-1 text-sm text-muted">Forms a thesis, stress-tests it with SERV Reasoning, and shows what changed.</p>
+      <h1 className="text-2xl font-semibold print:hidden">Crux</h1>
+      <p className="mt-1 text-sm text-muted print:hidden">Forms a thesis, stress-tests it with SERV Reasoning, and shows what changed.</p>
 
       <form
-        className="mt-6 flex flex-col gap-3 sm:flex-row"
+        className="mt-6 flex flex-col gap-3 sm:flex-row print:hidden"
         onSubmit={(e) => {
           e.preventDefault();
           if (!running) run();
@@ -87,13 +87,13 @@ export default function Home() {
       </form>
 
       {mode === "mock" && (
-        <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn print:hidden">
           Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made.
         </p>
       )}
 
       {(running || project) && (
-        <div className="mt-6 space-y-2">
+        <div className="mt-6 space-y-2 print:hidden">
           <Progress project={project} active={active} />
           {running && activeLabel && <p className="text-sm text-muted">Working on {activeLabel.toLowerCase()}…</p>}
         </div>
@@ -102,7 +102,7 @@ export default function Home() {
       {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
 
       {project && !running && project.status === "complete" && (
-        <p className="mt-4 text-sm">
+        <p className="mt-4 text-sm print:hidden">
           <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
             Saved report
           </Link>{" "}
@@ -112,7 +112,7 @@ export default function Home() {
 
       {project && (
         <div className="mt-8">
-          <Workstation project={project} />
+          <Workstation project={project} downloadable={!running} />
         </div>
       )}
     </main>

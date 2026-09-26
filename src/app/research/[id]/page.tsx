@@ -18,11 +18,11 @@ export default async function ResearchPage(props: PageProps<"/research/[id]">) {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <Link href="/" className="text-sm text-muted hover:text-foreground">
+      <Link href="/" className="text-sm text-muted hover:text-foreground print:hidden">
         ← New question
       </Link>
-      <h1 className="mt-4 text-2xl font-semibold leading-snug">{project.question}</h1>
-      <p className="mt-1 text-sm text-muted">
+      <h1 className="mt-4 text-2xl font-semibold leading-snug print:hidden">{project.question}</h1>
+      <p className="mt-1 text-sm text-muted print:hidden">
         {new Date(project.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
         {project.mode === "mock" && " · mock run (illustrative fixtures)"}
       </p>

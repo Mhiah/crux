@@ -97,10 +97,13 @@ export function Progress({ project, active }: { project: ResearchProject | null;
   );
 }
 
-export function Workstation({ project }: { project: ResearchProject }) {
+/** `downloadable` is off while a run is still streaming, so nobody saves half a report. */
+export function Workstation({ project, downloadable = true }: { project: ResearchProject; downloadable?: boolean }) {
   return (
     <RefsProvider project={project}>
       <div className="space-y-10">
+        <PrintHeader project={project} />
+        {downloadable && <Downloads project={project} />}
         <Answer project={project} />
         <WhatChanged project={project} />
         <StressTest project={project} />
@@ -109,6 +112,56 @@ export function Workstation({ project }: { project: ResearchProject }) {
         <Audit project={project} />
       </div>
     </RefsProvider>
+  );
+}
+
+const slug = (s: string) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "research";
+
+/** Nothing is stored for anyone: the report leaves the page as a PDF or a JSON file. */
+function Downloads({ project }: { project: ResearchProject }) {
+  const filename = `crux-${slug(project.question)}-${project.created_at.slice(0, 10)}`;
+
+  function downloadPdf() {
+    // Browsers name the saved PDF after the page title.
+    const title = document.title;
+    document.title = filename;
+    window.addEventListener("afterprint", () => (document.title = title), { once: true });
+    window.print();
+  }
+
+  function downloadJson() {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }));
+    const a = Object.assign(document.createElement("a"), { href: url, download: `${filename}.json` });
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const button = "rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface";
+  return (
+    <div className="flex flex-wrap items-center gap-2 print:hidden">
+      <button type="button" onClick={downloadPdf} className={button}>
+        Download PDF
+      </button>
+      <button type="button" onClick={downloadJson} className={button}>
+        Raw data (JSON)
+      </button>
+      <span className="text-xs text-muted">PDF: choose &ldquo;Save as PDF&rdquo; in the print dialog.</span>
+    </div>
+  );
+}
+
+/** Only in the PDF: what was asked, when, and whether it was a mock run. */
+function PrintHeader({ project }: { project: ResearchProject }) {
+  return (
+    <header className="hidden print:block">
+      <p className="text-sm font-semibold">Crux research report</p>
+      <h1 className="mt-1 text-2xl font-semibold leading-snug">{project.question}</h1>
+      <p className="mt-1 text-sm text-muted">
+        {new Date(project.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
+        {project.mode === "mock" && " · mock run: illustrative fixtures, not real research"}
+      </p>
+    </header>
   );
 }
 
@@ -264,10 +317,10 @@ function Expandable({ summary, children }: { summary: ReactNode; children: React
         onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), setOpen(!open))}
         className="flex cursor-pointer items-start gap-2 text-sm"
       >
-        <span className="mt-0.5 w-3 shrink-0 text-muted">{open ? "▾" : "▸"}</span>
+        <span className="mt-0.5 w-3 shrink-0 text-muted print:hidden">{open ? "▾" : "▸"}</span>
         <span className="flex-1">{summary}</span>
       </div>
-      {open && <div className="mt-2 pl-5">{children}</div>}
+      <div className={`mt-2 pl-5 ${open ? "" : "hidden print:block"}`}>{children}</div>
     </div>
   );
 }
@@ -370,12 +423,11 @@ function Evidence({ project }: { project: ResearchProject }) {
   const r = project.research;
   const [stance, setStance] = useState<(typeof STANCES)[number]>("all");
   if (!r) return null;
-  const claims = stance === "all" ? r.claims : r.claims.filter((c) => c.stance === stance);
   const count = (s: (typeof STANCES)[number]) => (s === "all" ? r.claims.length : r.claims.filter((c) => c.stance === s).length);
 
   return (
     <Section id="evidence" title="Evidence" aside={`${r.claims.length} claims from ${r.sources.length} sources`}>
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter claims by stance">
+      <div className="flex flex-wrap gap-2 print:hidden" role="group" aria-label="Filter claims by stance">
         {STANCES.map((s) => (
           <button
             key={s}
@@ -390,8 +442,8 @@ function Evidence({ project }: { project: ResearchProject }) {
       </div>
 
       <ul className="mt-4 divide-y divide-line rounded-lg border border-line">
-        {claims.map((c) => (
-          <li key={c.id} className="flex items-start gap-2 p-3 text-sm">
+        {r.claims.map((c) => (
+          <li key={c.id} className={`items-start gap-2 p-3 text-sm ${stance === "all" || c.stance === stance ? "flex" : "hidden print:flex"}`}>
             <Ref id={c.id} />
             <div className="flex-1">
               <p>{c.text}</p>
@@ -422,7 +474,7 @@ function Evidence({ project }: { project: ResearchProject }) {
         ))}
       </ul>
 
-      <details className="mt-4 text-sm">
+      <details className="mt-4 text-sm print:hidden">
         <summary className="cursor-pointer text-muted">Search queries ({r.queries.length})</summary>
         <ul className="mt-2 list-disc pl-5 text-muted">
           {r.queries.map((q) => (
@@ -455,7 +507,7 @@ function Audit({ project }: { project: ResearchProject }) {
                   {w}
                 </p>
               ))}
-              <pre className="mt-2 max-h-96 overflow-auto rounded bg-surface p-2 text-xs">{JSON.stringify(a.output, null, 2)}</pre>
+              <pre className="mt-2 max-h-96 overflow-auto rounded bg-surface p-2 text-xs print:hidden">{JSON.stringify(a.output, null, 2)}</pre>
             </details>
           </li>
         ))}
