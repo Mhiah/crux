@@ -3,7 +3,7 @@ import { outfit } from "@/lib/fonts";
 
 /**
  * The Crux wordmark: a C drawn from chevrons running clockwise (open on the right), set
- * as the first letter of "CRUX" in Outfit Bold. Everything is drawn in currentColor so
+ * as the first letter of "CRUX" in Outfit Light. Everything is drawn in currentColor so
  * it follows the theme.
  */
 
@@ -13,9 +13,8 @@ const STROKE = 13;
 // The chevrons' measured ink bounds, so the C's box has no empty margin (and nothing is clipped).
 const INK = { x: -56.7, y: -56.7, w: 92.2, h: 113.4 };
 
-// Outfit metrics (measured): Bold capital height (the C matches the bold X) and the space
-// built in to the left of the Light R.
-const CAP_HEIGHT = 0.719;
+// Outfit Light metrics (measured): capital height and the space built in to the left of the R.
+const CAP_HEIGHT = 0.703;
 const R_LEFT_BEARING = 0.078;
 // Round letters are drawn slightly taller than flat ones so they look the same height.
 const OVERSHOOT = 0.015;
@@ -48,9 +47,9 @@ export function CruxMark({ className = "", style }: { className?: string; style?
 }
 
 /**
- * "CRUX" as one logo: the chevron C sits on the baseline at capital height, then R and U
- * in Outfit Light and the X in Outfit Bold, slanted. Outfit has no italic, so the X is
- * sheared by a fixed angle rather than left to each browser's synthetic italic.
+ * "CRUX" as one logo: the chevron C sits on the baseline at capital height, then R, U and
+ * a slanted X in Outfit Light. Outfit has no italic, so the X is sheared by a fixed angle
+ * rather than left to each browser's synthetic italic.
  */
 export function Wordmark({ className = "" }: { className?: string }) {
   return (
@@ -67,7 +66,7 @@ export function Wordmark({ className = "" }: { className?: string }) {
       <span aria-hidden className="font-light" style={{ letterSpacing: "-0.04em", marginLeft: `${C_TO_R - R_LEFT_BEARING}em` }}>
         RU
       </span>
-      <span aria-hidden className="inline-block font-bold" style={{ letterSpacing: "-0.04em", transform: `skewX(-${X_SLANT}deg)`, marginLeft: `${X_NUDGE}em` }}>
+      <span aria-hidden className="inline-block font-light" style={{ letterSpacing: "-0.04em", transform: `skewX(-${X_SLANT}deg)`, marginLeft: `${X_NUDGE}em` }}>
         X
       </span>
     </span>
