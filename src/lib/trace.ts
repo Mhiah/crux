@@ -1,3 +1,4 @@
+import { SOURCE_KIND_LABEL } from "./research/sources";
 import type { ResearchProject } from "./types";
 
 /**
@@ -82,7 +83,7 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
       kind,
       title: s.title,
       body: s.excerpt,
-      meta: [s.publisher, s.published_date].filter((m): m is string => !!m),
+      meta: [s.publisher, s.published_date, s.kind && SOURCE_KIND_LABEL[s.kind], ...(s.flags ?? [])].filter((m): m is string => !!m),
       url: s.url,
       restsOn: [],
       usedBy: claims.length ? [{ label: "Claims drawn from this source", text: "", ids: claims }] : [],
