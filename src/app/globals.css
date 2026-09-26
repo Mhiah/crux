@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/*
+ * Theme: follows the device setting until someone uses the toggle, which sets
+ * data-theme on <html> (applied before first paint by the script in layout.tsx).
+ */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -18,10 +22,11 @@
   --info-soft: #dbeafe;
   --accent: #6d28d9;
   --accent-soft: #ede9fe;
+  color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
     --surface: #151515;
@@ -38,7 +43,28 @@
     --info-soft: rgb(96 165 250 / 0.14);
     --accent: #a78bfa;
     --accent-soft: rgb(167 139 250 / 0.16);
+    color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --surface: #151515;
+  --muted: #9a9a9a;
+  --line: rgb(255 255 255 / 0.12);
+
+  --good: #4ade80;
+  --good-soft: rgb(74 222 128 / 0.14);
+  --warn: #fbbf24;
+  --warn-soft: rgb(251 191 36 / 0.14);
+  --bad: #f87171;
+  --bad-soft: rgb(248 113 113 / 0.14);
+  --info: #60a5fa;
+  --info-soft: rgb(96 165 250 / 0.14);
+  --accent: #a78bfa;
+  --accent-soft: rgb(167 139 250 / 0.16);
+  color-scheme: dark;
 }
 
 @theme inline {

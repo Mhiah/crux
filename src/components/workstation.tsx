@@ -198,7 +198,7 @@ export function Workstation({ project, downloadable = true }: { project: Researc
 const slug = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "research";
 
-/** Nothing is stored for anyone: the report leaves the page as a PDF or a JSON file. */
+/** Nothing is stored for anyone: the report leaves the page as a PDF. */
 function Downloads({ project }: { project: ResearchProject }) {
   const filename = `crux-${slug(project.question)}-${project.created_at.slice(0, 10)}`;
   const [busy, setBusy] = useState(false);
@@ -225,8 +225,6 @@ function Downloads({ project }: { project: ResearchProject }) {
     }
   }
 
-  const downloadJson = () => save(new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }), `${filename}.json`);
-
   return (
     <div className="ml-auto flex items-center gap-1">
       {failed && <span className="text-xs text-bad">PDF failed, try again</span>}
@@ -236,10 +234,7 @@ function Downloads({ project }: { project: ResearchProject }) {
         disabled={busy}
         className="rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground disabled:opacity-60"
       >
-        {busy ? "Preparing…" : "PDF"}
-      </button>
-      <button type="button" onClick={downloadJson} className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground sm:block">
-        JSON
+        {busy ? "Preparing…" : "Download"}
       </button>
     </div>
   );
@@ -388,7 +383,7 @@ function ReasoningView({ project }: { project: ResearchProject }) {
 
       {st ? (
         <section>
-          <Heading aside="A skeptical investor's attack on the first answer">Stress test</Heading>
+          <Heading aside="How the first answer held up when stress-tested against the evidence">Stress test</Heading>
           <ol className="space-y-3">
             {[...st.challenges]
               .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { SiteHeader } from "@/components/site-header";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
@@ -76,16 +77,13 @@ export default function Home() {
   }
 
   const header = (
-    <header className="mx-auto flex w-full max-w-5xl items-center px-5 py-5 print:hidden">
-      <button type="button" onClick={newQuestion} disabled={running} className="text-xl font-semibold tracking-tight">
-        Crux
-      </button>
+    <SiteHeader onHome={newQuestion} homeDisabled={running}>
       {project && !running && (
-        <button type="button" onClick={newQuestion} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
+        <button type="button" onClick={newQuestion} className="rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
           New question
         </button>
       )}
-    </header>
+    </SiteHeader>
   );
 
   // Landing: the name, what Crux does, and the question box.
@@ -95,10 +93,10 @@ export default function Home() {
         {header}
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
           <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
-            Stress-test your next big decision.
+            AI research that stress-tests its conclusions.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
-            Crux researches your question, forms a thesis, attacks it with SERV Reasoning, and shows you exactly what changed and why.
+            Using SERV Reasoning, Crux forms a thesis, stress-tests it against the evidence, and audits it.
           </p>
 
           <form
