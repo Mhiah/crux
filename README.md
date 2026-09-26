@@ -8,15 +8,15 @@ Question → Research → Thesis → Stress Test → Re-evaluate → Conclusion 
 
 ## Status
 
-**Phase 1: reasoning engine.** The full pipeline runs end to end, with each stage streamed and recorded in an audit trail. The UI at `/` is a bare harness that shows raw stage output. The research workstation comes in Phase 3.
+**Phases 1 and 3: reasoning engine and research workstation.** The full pipeline runs end to end. At `/` you ask a question and the report fills in stage by stage; `/research/:id` reopens a saved run. Every record ID in the report (S3, C7, A2, X1), including IDs SERV cites inline, opens its audit trail: what it rests on and what relies on it.
 
 | Phase | | Status |
 |---|---|---|
 | 1 | Reasoning engine: research → thesis → stress test → re-evaluation → conclusion | ✅ |
 | 2 | Evidence layer: Supabase storage, richer claim extraction and source metadata | — |
-| 3 | Product UI: research workstation with stage panels and streaming | — |
-| 4 | What Changed: initial-vs-final comparison linked to evidence | data ✅, UI — |
-| 5 | Audit trail: conclusion → reasoning → claim → evidence → source | data ✅, UI — |
+| 3 | Product UI: research workstation with stage panels and streaming | ✅ |
+| 4 | What Changed: initial-vs-final comparison linked to evidence | ✅ |
+| 5 | Audit trail: conclusion → reasoning → claim → evidence → source | ✅ |
 | 6 | Demo polish | — |
 
 ## Running it
@@ -40,4 +40,4 @@ Without API keys, everything runs on **mock fixtures** built around the plan's e
 - **What Changed?** is *assembled* from the recorded stages, not generated, so each line is what the reasoning actually said, linked to its claims and challenges.
 - **API**: `POST /api/research` `{ question }` streams `PipelineEvent`s as NDJSON. `GET /api/research/:id` returns a saved project. Phase 1 stores projects as JSON in `.data/projects/`.
 
-Code map: `src/lib/types.ts` (data model) · `src/lib/pipeline.ts` (orchestration) · `src/lib/reasoning/{prompts,schemas}.ts` (stage contracts) · `src/lib/mock/` (fixtures).
+Code map: `src/components/workstation.tsx` (report UI) · `src/components/refs.tsx` (ID chips and audit-trail panel) · `src/lib/types.ts` (data model) · `src/lib/pipeline.ts` (orchestration) · `src/lib/reasoning/{prompts,schemas}.ts` (stage contracts) · `src/lib/mock/` (fixtures).
