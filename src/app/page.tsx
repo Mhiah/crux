@@ -7,7 +7,8 @@ import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
 /**
- * Shown faintly as the box's placeholder; pressing → (or Tab) in the empty box fills it in.
+ * Shown faintly as the box's placeholder; pressing → (or Tab) in the empty box fills it in,
+ * and so does tapping the empty box on a touchscreen.
  * Nothing runs, and no credits are spent, until the button is pressed.
  */
 const DEMO_QUESTION = "Are small businesses actually willing to accept crypto payments?";
@@ -110,6 +111,9 @@ export default function Home() {
               className="min-w-0 flex-1 resize-none bg-transparent px-3 py-3 text-base leading-snug [field-sizing:content] placeholder:text-muted/60 focus:outline-none max-sm:min-h-[4.5rem]"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
+              onPointerDown={(e) => {
+                if (!question && e.pointerType === "touch") setQuestion(DEMO_QUESTION);
+              }}
               onKeyDown={(e) => {
                 if (!question && (e.key === "ArrowRight" || e.key === "Tab")) {
                   e.preventDefault();
