@@ -33,15 +33,21 @@ export type ClaimCategory =
 export type Claim = {
   id: string; // C1, C2, ...
   text: string;
-  source_ids: string[];
+  source_ids: string[]; // only sources whose quote was found in their text
   category: ClaimCategory;
   stance: "supports" | "challenges" | "neutral"; // relative to the question's "yes"
+  /** The exact source words the claim rests on, each verified against that source's excerpt. */
+  quotes: { source_id: string; text: string }[];
+  /** Figures in the claim that none of its quotes contain: kept, but flagged. */
+  unmatched_numbers: string[];
 };
 
 export type Research = {
   queries: string[];
   sources: Source[];
   claims: Claim[];
+  /** Outcome of checking every extracted claim's quotes against its sources. */
+  fact_check: { extracted: number; dropped: number; flagged: number };
 };
 
 export type Assumption = {

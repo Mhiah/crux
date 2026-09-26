@@ -83,24 +83,32 @@ export const MOCK_QUERY_PLAN = {
   ],
 };
 
+/** Every quote is copied from the fixture excerpts above, so mock runs pass fact checking. */
+const claim = (text: string, category: string, stance: string, ...quotes: [string, string][]) => ({
+  text,
+  quotes: quotes.map(([source_id, quote]) => ({ source_id, text: quote })),
+  category,
+  stance,
+});
+
 export const MOCK_CLAIMS = {
   claims: [
-    { text: "68% of surveyed small businesses keep records in paper ledgers or notebooks.", source_ids: ["S1"], category: "market_demand", stance: "supports" },
-    { text: "54% of surveyed owners say poor record-keeping cost them a loan application in the past two years.", source_ids: ["S1"], category: "customers", stance: "supports" },
-    { text: "71% of SME owners use a smartphone for business daily.", source_ids: ["S1"], category: "adoption", stance: "supports" },
-    { text: "Tax reforms require businesses above a turnover threshold to keep digital records, phased in over three years.", source_ids: ["S2"], category: "regulation", stance: "supports" },
-    { text: "Businesses below the turnover threshold are exempt from most filing obligations.", source_ids: ["S2"], category: "regulation", stance: "challenges" },
-    { text: "Payments and POS providers bundle free basic bookkeeping into their merchant apps.", source_ids: ["S3"], category: "competition", stance: "challenges" },
-    { text: "Two venture-backed SME accounting startups raised seed rounds in 2025.", source_ids: ["S3"], category: "competition", stance: "neutral" },
-    { text: "Median stated willingness to pay for business software among micro businesses is under ₦3,000 per month.", source_ids: ["S4"], category: "pricing", stance: "challenges" },
-    { text: "Fewer than 15% of micro-business trial users converted to paid plans.", source_ids: ["S4"], category: "pricing", stance: "challenges" },
-    { text: "Owners value tools that help them get paid or get credit over tools that only keep records.", source_ids: ["S4", "S5"], category: "customers", stance: "neutral" },
-    { text: "Lenders cite missing financial records as the top reason for rejecting small business loans.", source_ids: ["S5"], category: "customers", stance: "supports" },
-    { text: "Some lenders accept bank and mobile-money transaction history in place of formal accounts.", source_ids: ["S5"], category: "trends", stance: "challenges" },
-    { text: "61% of SME owners would not let software categorise their finances without checking it.", source_ids: ["S6"], category: "adoption", stance: "challenges" },
-    { text: "Voice and local-language support increased engagement in pilots by roughly a third.", source_ids: ["S6"], category: "adoption", stance: "supports" },
-    { text: "Trade associations and cooperatives are the most trusted channel for new business tools.", source_ids: ["S7"], category: "customers", stance: "neutral" },
-    { text: "Offline-capable apps retain users better in trader markets with intermittent connectivity.", source_ids: ["S8"], category: "adoption", stance: "neutral" },
+    claim("68% of surveyed small businesses keep records in paper ledgers or notebooks.", "market_demand", "supports", ["S1", "68% said they still keep records in paper ledgers or notebooks"]),
+    claim("54% of surveyed owners say poor record-keeping cost them a loan application in the past two years.", "customers", "supports", ["S1", "54% said poor record-keeping had cost them a loan application in the past two years"]),
+    claim("71% of SME owners use a smartphone for business daily.", "adoption", "supports", ["S1", "71% of owners use a smartphone for business daily"]),
+    claim("Tax reforms require businesses above a turnover threshold to keep digital records, phased in over three years.", "regulation", "supports", ["S2", "require businesses above a turnover threshold to keep digital records available for inspection"], ["S2", "Enforcement is expected to be phased over three years."]),
+    claim("Businesses below the turnover threshold are exempt from most filing obligations.", "regulation", "challenges", ["S2", "Businesses below the threshold are exempt from most filing obligations."]),
+    claim("Payments and POS providers bundle free basic bookkeeping into their merchant apps.", "competition", "challenges", ["S3", "Several payments and POS providers now bundle free basic bookkeeping"]),
+    claim("Two venture-backed SME accounting startups raised seed rounds in 2025.", "competition", "neutral", ["S3", "Two venture-backed SME accounting startups raised seed rounds in 2025."]),
+    claim("Median stated willingness to pay for business software among micro businesses is under ₦3,000 per month.", "pricing", "challenges", ["S4", "the median stated willingness to pay for business software was under ₦3,000 per month"]),
+    claim("Fewer than 15% of micro-business trial users converted to paid plans.", "pricing", "challenges", ["S4", "fewer than 15% of trial users converted to paid plans after a free period"]),
+    claim("Owners value tools that help them get paid or get credit over tools that only keep records.", "customers", "neutral", ["S4", "Owners valued tools that directly helped them get paid or get credit over tools that only kept records."]),
+    claim("Lenders cite missing financial records as the top reason for rejecting small business loans.", "customers", "supports", ["S5", "Lenders cite missing financial records as the top reason for rejecting small business loan applications."]),
+    claim("Some lenders accept bank and mobile-money transaction history in place of formal accounts.", "trends", "challenges", ["S5", "accept bank and mobile-money transaction history in place of formal accounts"]),
+    claim("61% of SME owners would not let software categorise their finances without checking it.", "adoption", "challenges", ["S6", "61% said they would not let software categorise their finances without checking it"]),
+    claim("Voice and local-language support increased engagement in pilots by roughly a third.", "adoption", "supports", ["S6", "Voice and local-language support increased engagement in pilots by roughly a third."]),
+    claim("Trade associations and cooperatives are the most trusted channel for new business tools.", "customers", "neutral", ["S7", "Trade associations and cooperatives are the most trusted channel for new business tools"]),
+    claim("Offline-capable apps retain users better in trader markets with intermittent connectivity.", "adoption", "neutral", ["S8", "intermittent connectivity remains common outside major cities"], ["S8", "Apps that work offline and sync later retain users better in trader markets."]),
   ],
 };
 

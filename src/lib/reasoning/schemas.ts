@@ -54,7 +54,13 @@ export const CLAIMS_SCHEMA = schema(
     claims: arr(
       obj({
         text: str("One specific, checkable factual claim stated in the source excerpts. Include numbers and dates when the source gives them. No opinions of your own."),
-        source_ids: ids("S", "the sources that state this claim"),
+        quotes: arr(
+          obj({
+            source_id: str("The ID of the source this quote comes from (e.g. S3). Only use IDs that appear in the input."),
+            text: str("The exact words from that source's excerpt that state the claim, copied character for character. At least one full clause; use ... only to skip words inside the same excerpt."),
+          }),
+          "One quote per source that states this claim. Quotes are checked against the source text; a claim with no quote found in its source is discarded.",
+        ),
         category: strEnum(CLAIM_CATEGORIES),
         stance: strEnum(["supports", "challenges", "neutral"], "Relative to answering the research question 'yes'."),
       }),

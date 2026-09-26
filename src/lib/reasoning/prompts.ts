@@ -9,7 +9,7 @@ const GROUNDING = `Ground everything in the supplied evidence and cite it by ID.
 
 export const QUERY_PLAN_SYSTEM = `You plan web research for a strategic question. Produce search queries that together cover market demand, target customers, competitors, pricing, adoption barriers, trends, regulation and risks. Deliberately include queries that could surface evidence against the obvious answer. Prefer specific queries (named markets, segments, years) over generic ones.`;
 
-export const CLAIMS_SYSTEM = `You extract evidence from web sources for a research question. Pull out specific, checkable factual claims the sources actually state, each tied to the source IDs that state it. Keep numbers, dates and named entities. Include claims that cut against the question as well as for it, and mark each claim's stance. Skip marketing fluff and anything not relevant to the question. Draw on every relevant source; aim for 15-40 claims. ${GROUNDING}`;
+export const CLAIMS_SYSTEM = `You extract evidence from web sources for a research question. Pull out specific, checkable factual claims the sources actually state, each tied to the source IDs that state it. Keep numbers, dates and named entities. Include claims that cut against the question as well as for it, and mark each claim's stance. Skip marketing fluff and anything not relevant to the question. Draw on every relevant source; aim for 15-40 claims. For every claim, quote the exact words from each source that states it: copy them verbatim, never paraphrase, because every quote is checked against the source text and claims whose quotes can't be found are discarded. Any figure in a claim must appear in its quote. ${GROUNDING}`;
 
 export const THESIS_SYSTEM = `You are the thesis stage of a research engine that forms a thesis and then stress-tests it. From the evidence, form the strongest initial thesis that answers the research question. Make every load-bearing assumption explicit, because the next stage will attack them. This is the initial thesis, not the final answer: commit to a clear position rather than hedging, and state honestly how confident the evidence lets you be. ${GROUNDING}`;
 
@@ -26,7 +26,12 @@ export function formatSources(sources: Source[]): string {
 }
 
 export function formatClaims(claims: Claim[]): string {
-  return claims.map((c) => `[${c.id}] (${c.category}, ${c.stance}; sources ${c.source_ids.join(", ")}) ${c.text}`).join("\n");
+  return claims
+    .map((c) => {
+      const flag = c.unmatched_numbers.length ? ` [unverified figures: ${c.unmatched_numbers.join(", ")}; not found in the source quote]` : "";
+      return `[${c.id}] (${c.category}, ${c.stance}; sources ${c.source_ids.join(", ")}) ${c.text}${flag}`;
+    })
+    .join("\n");
 }
 
 const list = (items: string[]) => (items.length ? items.map((i) => `- ${i}`).join("\n") : "- (none)");
