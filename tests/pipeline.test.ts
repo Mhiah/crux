@@ -153,5 +153,24 @@ describe("runResearch", () => {
     expect(project.thesis).not.toBeNull();
     expect(events).toContainEqual({ type: "error", stage: "stress_test", message: "SERV unavailable" });
     expect(saved).toBe(true);
+    expect(events.at(-1)).toMatchObject({ type: "done", saved: true });
+  });
+
+  it("still delivers the report when it can't be saved, and says it wasn't saved", async () => {
+    const events: PipelineEvent[] = [];
+    const project = await runResearch(QUESTION, {
+      reasoning: new MockReasoning(),
+      search: new MockSearch(),
+      onEvent: (e) => events.push(e),
+      save: async () => {
+        throw new Error("EROFS: read-only file system");
+      },
+    });
+    expect(project.status).toBe("complete");
+    expect(events.at(-1)).toMatchObject({ type: "done", saved: false, project: { status: "complete" } });
+
+    const unsaved: PipelineEvent[] = [];
+    await runResearch(QUESTION, { reasoning: new MockReasoning(), search: new MockSearch(), onEvent: (e) => unsaved.push(e) });
+    expect(unsaved.at(-1)).toMatchObject({ type: "done", saved: false });
   });
 });

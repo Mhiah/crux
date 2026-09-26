@@ -18,7 +18,7 @@ export type PipelineDeps = {
  * produced. Stages run in order because each one reasons over the ones before it.
  */
 export async function runResearch(question: string, deps: PipelineDeps): Promise<ResearchProject> {
-  const { reasoning, search, onEvent = () => {}, save = async () => {} } = deps;
+  const { reasoning, search, onEvent = () => {}, save } = deps;
   const project: ResearchProject = {
     id: randomUUID(),
     question,
@@ -117,7 +117,16 @@ export async function runResearch(question: string, deps: PipelineDeps): Promise
     onEvent({ type: "error", stage: current, message: project.error });
   }
 
-  await save(project);
-  onEvent({ type: "done", project });
+  // A report that can't be saved is still delivered: it streams to the page and downloads as a PDF.
+  let saved = false;
+  if (save) {
+    try {
+      await save(project);
+      saved = true;
+    } catch (err) {
+      console.error(`Couldn't save project ${project.id}:`, err);
+    }
+  }
+  onEvent({ type: "done", project, saved });
   return project;
 }

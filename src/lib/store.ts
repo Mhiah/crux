@@ -3,9 +3,16 @@ import path from "node:path";
 import type { ResearchProject } from "./types";
 
 /**
- * File-backed project store for Phase 1. Swapped for Supabase/Postgres in Phase 2;
- * callers only depend on saveProject/loadProject.
+ * Saves runs as JSON files on the machine running the app, so they reopen at /research/:id.
+ * Callers only depend on saveProject/loadProject.
  */
+
+/**
+ * Vercel's functions can't keep files between requests, so runs aren't saved there (unless
+ * CRUX_DATA_DIR points somewhere writable); reports are kept by downloading the PDF.
+ */
+export const storageAvailable = !process.env.VERCEL || Boolean(process.env.CRUX_DATA_DIR);
+
 const DATA_DIR = process.env.CRUX_DATA_DIR || path.join(process.cwd(), ".data", "projects");
 
 const fileFor = (id: string) => {

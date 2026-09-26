@@ -136,7 +136,7 @@ flowchart LR
 2. The pipeline ([src/lib/pipeline.ts](src/lib/pipeline.ts)) runs the stages in order and records an audit entry for each: model, duration, inputs, output and warnings.
 3. Research ([src/lib/research/collect.ts](src/lib/research/collect.ts)) plans the searches, runs them, picks sources query by query, and has SERV extract facts; the fact check and source labels are plain code.
 4. The reasoning stages ([src/lib/reasoning/stages.ts](src/lib/reasoning/stages.ts)) cite records by ID. Unknown IDs are removed and logged before anything is saved.
-5. Runs are saved as JSON on the machine running the app and reopen at `/research/:id`. Nothing is sent anywhere else.
+5. Runs are saved as JSON on the machine running the app and reopen at `/research/:id`. Nothing is sent anywhere else. On Vercel, runs aren't saved; the report is kept by downloading the PDF.
 
 ## Honest by design
 
@@ -161,7 +161,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 - **Live runs with SERV and Tavily.** Five live runs of the crypto question on 26 September 2026. The balanced-research change took the evidence from 24 for and 0 against to a real case against (6 to 9 facts against in each later run). The stronger-sources change took the source mix from 13 company or blog sites out of 20 to 1, with research, official statistics and industry reports making up 12.
 - **The screenshots** are from the fifth run, shown exactly as it came back. 3 of the 31 extracted facts were dropped because their quotes weren't in the source text (one rested on a Statista page whose figures sit behind a paywall), and 1 is flagged because it states a sample size its quote doesn't contain.
-- **Unit tests** (`npm test`, 68 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
+- **Unit tests** (`npm test`, 69 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
 - **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
 
@@ -198,6 +198,14 @@ npm run lint
 npm run build
 ```
 
+## Deploy on Vercel
+
+1. Import the GitHub repo in Vercel. The defaults (Next.js, `npm run build`) are right.
+2. In **Settings → Environment Variables**, add `SERV_API_KEY` and `TAVILY_API_KEY` for Production (and Preview if you use it). Your `.env.local` file is never uploaded, so without this step the app has no keys and shows the sample report.
+3. Redeploy (**Deployments → ⋯ → Redeploy**), because variables only apply to deployments made after they're added.
+
+A run takes about a minute, and the research API allows up to 300 seconds. On Vercel, runs aren't saved (functions can't keep files), so there is no "Saved report" link; use **Download** to keep a report.
+
 ## Project layout
 
 ```
@@ -232,6 +240,6 @@ docs/screenshots/             The images in this README
 - **What the fact check proves.** That each quote really appears in its source, and that the fact's figures appear in it. It doesn't prove the fact's wording is a faithful summary beyond that. Spelled-out numbers are read up to ninety-nine.
 - **SERV's prompt guard** occasionally blocks harmless requests. Blocks are retried up to twice; if a run still fails, running it again usually works.
 - **One model.** Runs use `gpt-5.4-mini` through SERV unless `SERV_MODEL` is set; other models haven't been tested.
-- **Runs stay on one machine.** Reports are saved as local files and shared by downloading the PDF. There are no accounts and no hosted version.
+- **Runs stay on one machine.** Reports are saved as local files, or not at all on Vercel, and are shared by downloading the PDF. There are no accounts.
 - **The PDF has no page numbers.**
 - **No CI.** The checks are the unit tests, type check, lint, build and browser runs listed above.

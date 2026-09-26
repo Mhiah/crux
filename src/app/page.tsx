@@ -22,6 +22,7 @@ export default function Home() {
   const [project, setProject] = useState<ResearchProject | null>(null);
   const [mode, setMode] = useState<"live" | "mock" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   // Tapping the empty box fills the demo question once; after that a tap just edits.
   const tapFilled = useRef(false);
 
@@ -32,6 +33,7 @@ export default function Home() {
     if (event.type === "error") setError(`${STAGES.find((s) => s.key === event.stage)?.label ?? "The pipeline"} failed: ${event.message}`);
     if (event.type === "done") {
       setProject(event.project);
+      setSaved(event.saved);
       setActive(null);
     }
   }
@@ -41,6 +43,7 @@ export default function Home() {
     setProject(null);
     setError(null);
     setMode(null);
+    setSaved(false);
     try {
       const res = await fetch("/api/research", {
         method: "POST",
@@ -76,6 +79,7 @@ export default function Home() {
     setProject(null);
     setError(null);
     setMode(null);
+    setSaved(false);
   }
 
   const header = (
@@ -165,7 +169,7 @@ export default function Home() {
 
         {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
 
-        {project && !running && project.status === "complete" && (
+        {project && !running && saved && project.status === "complete" && (
           <p className="mt-4 text-sm print:hidden">
             <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
               Saved report

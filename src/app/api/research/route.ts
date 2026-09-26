@@ -1,6 +1,6 @@
 import { runResearch } from "@/lib/pipeline";
 import { getProviders } from "@/lib/providers";
-import { saveProject } from "@/lib/store";
+import { saveProject, storageAvailable } from "@/lib/store";
 
 // A full run makes six SERV calls plus searches; allow well over the default limit.
 export const maxDuration = 300;
@@ -16,12 +16,15 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      await runResearch(question, {
-        ...getProviders(),
-        save: saveProject,
-        onEvent: (event) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n")),
-      });
-      controller.close();
+      try {
+        await runResearch(question, {
+          ...getProviders(),
+          save: storageAvailable ? saveProject : undefined,
+          onEvent: (event) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n")),
+        });
+      } finally {
+        controller.close();
+      }
     },
   });
 

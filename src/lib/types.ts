@@ -189,4 +189,5 @@ export type PipelineEvent =
   | { type: "stage_started"; stage: Stage }
   | { type: "stage_completed"; stage: Stage; audit: ReasoningAudit; project: ResearchProject }
   | { type: "error"; stage: Stage | null; message: string }
-  | { type: "done"; project: ResearchProject };
+  /** `saved`: the run can be reopened at /research/:id (false where there is no storage, e.g. Vercel). */
+  | { type: "done"; project: ResearchProject; saved: boolean };
