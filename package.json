@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node --use-env-proxy node_modules/next/dist/bin/next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node --use-env-proxy node_modules/next/dist/bin/next start",
     "lint": "eslint",
-    "research": "tsx --env-file-if-exists=.env.local scripts/research.ts",
+    "research": "tsx --use-env-proxy --env-file-if-exists=.env.local scripts/research.ts",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit"
   },

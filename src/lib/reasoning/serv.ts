@@ -7,6 +7,8 @@ import type { ReasoningProvider, ReasonRequest, ReasonResult } from "./provider"
  */
 export const SERV_BASE_URL = process.env.SERV_BASE_URL || "https://inference-api.openserv.ai/v1";
 export const SERV_MODEL = process.env.SERV_MODEL || "gpt-5.4-mini";
+/** Far above any stage's output (the claim list, the largest, is a few thousand tokens). */
+const MAX_OUTPUT_TOKENS = 16_000;
 
 /**
  * SERV Tools are intercepted server-side. The prompt guard matters here because every
@@ -60,6 +62,8 @@ export class ServProvider implements ReasoningProvider {
           tools: servTools(req.step),
           response_format: { type: "json_schema", json_schema: req.schema },
           temperature: 0.2,
+          // Left unset, SERV sometimes picks a limit above the model's 128k cap and rejects its own request.
+          max_completion_tokens: MAX_OUTPUT_TOKENS,
         });
         const message = res.choices[0]?.message;
         if (message?.refusal) throw new Error(`SERV refused the ${req.step} step: ${message.refusal}`);
