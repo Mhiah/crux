@@ -19,6 +19,11 @@ function useRefs() {
   return ctx;
 }
 
+/** Opens the audit-trail panel for a record, for buttons that aren't ID chips. */
+export function useTrace() {
+  return useRefs().open;
+}
+
 export const KIND_LABEL: Record<RefKind, string> = {
   source: "Source",
   claim: "Claim",

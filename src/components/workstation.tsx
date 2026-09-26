@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { Linked, Ref, RefList, RefsProvider } from "./refs";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { RefsProvider, useTrace } from "./refs";
+import { claimsBehind, refsIn, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
 import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type ResearchProject, type Source, type Stage } from "@/lib/types";
 
 /**
- * The research workstation: the answer first, then how it was reached (what changed,
- * the stress test, the initial thesis) and the evidence underneath. Renders a project
- * while it streams in and after it's saved.
+ * The research report, in three views: Answer (what to do and what changed), Reasoning
+ * (the stress test and how each assumption held up) and Evidence (every fact with its
+ * source quote). Record IDs stay out of the reading views; anything backed by facts gets
+ * an "Evidence" link that opens the Evidence view filtered to those facts. The PDF
+ * prints all three views in order.
  */
 
 export const STAGES: { key: Stage; label: string }[] = [
@@ -40,6 +43,7 @@ const SEVERITY_TONE: Record<Challenge["severity"], Tone> = { minor: "neutral", m
 const STANCE_TONE: Record<Claim["stance"], Tone> = { supports: "good", challenges: "bad", neutral: "neutral" };
 const CONFIDENCE_TONE: Record<Confidence, Tone> = { high: "good", medium: "warn", low: "bad" };
 const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 };
+const STANCE_LABEL: Record<Claim["stance"], string> = { supports: "for", challenges: "against", neutral: "neutral" };
 
 const human = (s: string) => s.replace(/_/g, " ");
 
@@ -47,29 +51,24 @@ function ConfidenceBadge({ level }: { level: Confidence }) {
   return <Badge tone={CONFIDENCE_TONE[level]}>{level} confidence</Badge>;
 }
 
-function Section({ id, title, aside, children }: { id: string; title: string; aside?: ReactNode; children: ReactNode }) {
-  return (
-    <section id={id} className="scroll-mt-6 border-t border-line pt-8">
-      <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-lg font-semibold">{title}</h2>
-        {aside && <div className="text-sm text-muted">{aside}</div>}
-      </div>
-      {children}
-    </section>
-  );
+function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`rounded-xl border border-line p-4 sm:p-5 ${className}`}>{children}</div>;
 }
 
-function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-lg border border-line p-4 ${className}`}>{children}</div>;
+function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }) {
+  return (
+    <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+      <h2 className="text-lg font-semibold tracking-tight">{children}</h2>
+      {aside && <span className="text-sm text-muted">{aside}</span>}
+    </div>
+  );
 }
 
 function Bullets({ items }: { items: string[] }) {
   return (
-    <ul className="list-disc space-y-1 pl-5 text-sm">
+    <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
       {items.map((item, i) => (
-        <li key={i}>
-          <Linked text={item} />
-        </li>
+        <li key={i}>{stripRefs(item)}</li>
       ))}
     </ul>
   );
@@ -98,20 +97,100 @@ export function Progress({ project, active }: { project: ResearchProject | null;
   );
 }
 
+// ---------------------------------------------------------------------------------------
+// Views and the "Evidence" link that ties them together
+
+type View = "answer" | "reasoning" | "evidence";
+type Focus = { label: string; claimIds: string[] } | null;
+type Nav = { project: ResearchProject; go: (view: View) => void; showEvidence: (label: string, ids: string[]) => void };
+
+const NavCtx = createContext<Nav | null>(null);
+const useNav = () => useContext(NavCtx)!;
+
+/**
+ * "Evidence · 4": the facts behind a point. `ids` can mix any record IDs; IDs cited inside
+ * `text` count too. Renders nothing when no facts are behind it.
+ */
+function EvidenceLink({ label, ids = [], text = "" }: { label: string; ids?: string[]; text?: string }) {
+  const { project, showEvidence } = useNav();
+  const claimIds = claimsBehind(project, [...ids, ...refsIn(text)]);
+  if (claimIds.length === 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => showEvidence(label, claimIds)}
+      className="inline-flex items-center gap-1 rounded-full border border-line px-2.5 py-1 text-xs font-medium text-muted transition hover:border-foreground/30 hover:text-foreground print:hidden"
+    >
+      Evidence · {claimIds.length}
+      <span aria-hidden>→</span>
+    </button>
+  );
+}
+
+const VIEWS: { key: View; label: string }[] = [
+  { key: "answer", label: "Answer" },
+  { key: "reasoning", label: "Reasoning" },
+  { key: "evidence", label: "Evidence" },
+];
+
 /** `downloadable` is off while a run is still streaming, so nobody saves half a report. */
 export function Workstation({ project, downloadable = true }: { project: ResearchProject; downloadable?: boolean }) {
+  const [view, setView] = useState<View>("answer");
+  const [focus, setFocus] = useState<Focus>(null);
+  const top = useRef<HTMLDivElement>(null);
+
+  const go = (next: View) => {
+    setView(next);
+    if (next !== "evidence") setFocus(null);
+    top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  const nav: Nav = {
+    project,
+    go,
+    showEvidence: (label, claimIds) => {
+      setFocus({ label, claimIds });
+      go("evidence");
+    },
+  };
+
+  const panel = (key: View) => (view === key ? "block" : "hidden print:block");
+
   return (
     <RefsProvider project={project}>
-      <div className="space-y-10">
-        <PrintHeader project={project} />
-        {downloadable && <Downloads project={project} />}
-        <Answer project={project} />
-        <WhatChanged project={project} />
-        <StressTest project={project} />
-        <Thesis project={project} />
-        <Evidence project={project} />
-        <Audit project={project} />
-      </div>
+      <NavCtx.Provider value={nav}>
+        <div ref={top} className="scroll-mt-4">
+          <PrintHeader project={project} />
+          <div className="sticky top-0 z-10 -mx-5 mb-6 flex items-center gap-2 border-b border-line bg-background/90 px-5 py-2 backdrop-blur print:hidden">
+            <nav className="flex gap-1" aria-label="Report views">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  aria-current={view === v.key ? "page" : undefined}
+                  onClick={() => go(v.key)}
+                  className={`rounded-full px-3.5 py-1.5 text-sm font-medium transition ${
+                    view === v.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
+                  }`}
+                >
+                  {v.label}
+                  {v.key === "evidence" && project.research ? <span className="ml-1 opacity-60">{project.research.claims.length}</span> : null}
+                </button>
+              ))}
+            </nav>
+            {downloadable && <Downloads project={project} />}
+          </div>
+
+          <div className={panel("answer")}>
+            <AnswerView project={project} />
+          </div>
+          <div className={`${panel("reasoning")} print:mt-12`}>
+            <ReasoningView project={project} />
+          </div>
+          <div className={`${panel("evidence")} print:mt-12`}>
+            <EvidenceView project={project} focus={focus} clearFocus={() => setFocus(null)} />
+          </div>
+        </div>
+      </NavCtx.Provider>
     </RefsProvider>
   );
 }
@@ -138,16 +217,14 @@ function Downloads({ project }: { project: ResearchProject }) {
     URL.revokeObjectURL(url);
   }
 
-  const button = "rounded-lg border border-line px-3 py-1.5 text-sm font-medium hover:bg-surface";
   return (
-    <div className="flex flex-wrap items-center gap-2 print:hidden">
-      <button type="button" onClick={downloadPdf} className={button}>
-        Download PDF
+    <div className="ml-auto flex items-center gap-1">
+      <button type="button" onClick={downloadPdf} className="rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground">
+        PDF
       </button>
-      <button type="button" onClick={downloadJson} className={button}>
-        Raw data (JSON)
+      <button type="button" onClick={downloadJson} className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground sm:block">
+        JSON
       </button>
-      <span className="text-xs text-muted">PDF: choose &ldquo;Save as PDF&rdquo; in the print dialog.</span>
     </div>
   );
 }
@@ -155,7 +232,7 @@ function Downloads({ project }: { project: ResearchProject }) {
 /** Only in the PDF: what was asked, when, and whether it was a mock run. */
 function PrintHeader({ project }: { project: ResearchProject }) {
   return (
-    <header className="hidden print:block">
+    <header className="mb-8 hidden print:block">
       <p className="text-sm font-semibold">Crux research report</p>
       <h1 className="mt-1 text-2xl font-semibold leading-snug">{project.question}</h1>
       <p className="mt-1 text-sm text-muted">
@@ -166,324 +243,350 @@ function PrintHeader({ project }: { project: ResearchProject }) {
   );
 }
 
-function Answer({ project }: { project: ResearchProject }) {
-  const c = project.conclusion;
-  if (!c) return null;
-  const verdict = project.reevaluation?.thesis_verdict;
-  return (
-    <section id="answer" className="space-y-4">
-      <Card className="bg-surface">
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">Answer</h2>
-          <ConfidenceBadge level={c.confidence} />
-          {verdict && <Badge tone={THESIS_TONE[verdict]}>thesis {verdict} by stress test</Badge>}
-        </div>
-        <p className="mt-3 text-lg leading-relaxed">
-          <Linked text={c.final_statement} />
-        </p>
-        <p className="mt-3 text-sm text-muted">
-          <Linked text={c.confidence_rationale} />
-        </p>
-        <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
-          <RefList label="Key support" ids={c.key_supporting_claim_ids} />
-          <RefList label="Key counter-evidence" ids={c.key_challenging_claim_ids} />
-        </div>
-      </Card>
+function Waiting({ children }: { children: ReactNode }) {
+  return <p className="rounded-xl border border-dashed border-line p-6 text-center text-sm text-muted">{children}</p>;
+}
 
-      <div className="grid gap-4 sm:grid-cols-2">
+function NextButton({ to, children }: { to: View; children: ReactNode }) {
+  const { go } = useNav();
+  return (
+    <button type="button" onClick={() => go(to)} className="rounded-full border border-line px-4 py-2 text-sm font-medium hover:bg-surface print:hidden">
+      {children} <span aria-hidden>→</span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------------------
+// Answer: the conclusion, what changed, and what to do next
+
+function AnswerView({ project }: { project: ResearchProject }) {
+  const c = project.conclusion;
+  const wc = project.what_changed;
+  const verdict = project.reevaluation?.thesis_verdict;
+  if (!c) return <Waiting>The answer appears once the thesis has been stress-tested and re-evaluated.</Waiting>;
+
+  return (
+    <div className="space-y-10">
+      <section>
+        <div className="flex flex-wrap items-center gap-2">
+          <ConfidenceBadge level={c.confidence} />
+          {verdict && <Badge tone={THESIS_TONE[verdict]}>thesis {verdict} by the stress test</Badge>}
+        </div>
+        <p className="mt-4 text-xl leading-relaxed font-medium tracking-tight sm:text-2xl">{stripRefs(c.final_statement)}</p>
+        <p className="mt-4 leading-relaxed text-muted">{stripRefs(c.confidence_rationale)}</p>
+        <div className="mt-4">
+          <EvidenceLink label="the answer" ids={[...c.key_supporting_claim_ids, ...c.key_challenging_claim_ids]} text={c.confidence_rationale} />
+        </div>
+      </section>
+
+      {wc && (
+        <section>
+          <Heading aside={`${wc.challenged.length} challenges raised`}>What changed?</Heading>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Card>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold text-muted">First answer</h3>
+                <ConfidenceBadge level={wc.initial.confidence} />
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(wc.initial.statement)}</p>
+            </Card>
+            <Card className="border-foreground/25">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-sm font-semibold">After the stress test</h3>
+                <ConfidenceBadge level={wc.final.confidence} />
+              </div>
+              <p className="mt-2 text-sm leading-relaxed">{stripRefs(wc.final.statement)}</p>
+            </Card>
+          </div>
+
+          {wc.changes.length > 0 ? (
+            <>
+              <h3 className="mt-6 text-sm font-semibold">Why it changed</h3>
+              <ol className="mt-3 space-y-3">
+                {wc.changes.map((ch, i) => (
+                  <li key={i}>
+                    <Card>
+                      <p className="text-sm text-muted line-through decoration-muted/40">{stripRefs(ch.from)}</p>
+                      <p className="mt-1 text-sm font-medium">→ {stripRefs(ch.to)}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(ch.reason)}</p>
+                      <div className="mt-3">
+                        <EvidenceLink label={`“${stripRefs(ch.to)}”`} ids={[...ch.claim_ids, ...ch.challenge_ids]} text={ch.reason} />
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-muted">The thesis survived the stress test without material changes.</p>
+          )}
+        </section>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <Card>
           <h3 className="text-sm font-semibold">Next steps to validate</h3>
-          <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm">
+          <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
             {c.next_validation_steps.map((s, i) => (
               <li key={i}>
-                <Linked text={s.step} />
-                <p className="text-muted">
-                  Resolves: <Linked text={s.resolves} />
-                </p>
+                {stripRefs(s.step)}
+                <p className="mt-0.5 text-muted">Settles: {stripRefs(s.resolves)}</p>
               </li>
             ))}
           </ol>
         </Card>
         <Card>
-          <h3 className="mb-2 text-sm font-semibold">Still uncertain</h3>
+          <h3 className="mb-3 text-sm font-semibold">Still uncertain</h3>
           <Bullets items={c.uncertainties} />
         </Card>
       </div>
-    </section>
-  );
-}
 
-function WhatChanged({ project }: { project: ResearchProject }) {
-  const wc = project.what_changed;
-  if (!wc) return null;
-  const critical = wc.challenged.filter((c) => c.severity === "critical").length;
-  return (
-    <Section
-      id="what-changed"
-      title="What changed?"
-      aside={`${wc.challenged.length} challenges${critical ? `, ${critical} critical` : ""} · thesis ${wc.verdict}`}
-    >
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-muted">Initial thesis</h3>
-            <ConfidenceBadge level={wc.initial.confidence} />
-          </div>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            <Linked text={wc.initial.statement} />
-          </p>
-        </Card>
-        <Card className="border-foreground/25">
-          <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold">After stress test</h3>
-            <ConfidenceBadge level={wc.final.confidence} />
-          </div>
-          <p className="mt-2 text-sm leading-relaxed">
-            <Linked text={wc.final.statement} />
-          </p>
-        </Card>
+      <div className="flex flex-wrap gap-2">
+        <NextButton to="reasoning">See the reasoning</NextButton>
+        <NextButton to="evidence">Check the evidence</NextButton>
       </div>
-
-      <h3 className="mt-6 text-sm font-semibold">Assumptions, re-judged</h3>
-      <ul className="mt-2 divide-y divide-line rounded-lg border border-line">
-        {wc.assumptions.map((a) => (
-          <li key={a.assumption_id}>
-            <Expandable
-              summary={
-                <span className="flex items-start gap-2">
-                  <Ref id={a.assumption_id} />
-                  <span className="flex-1">{a.text}</span>
-                  <Badge tone={VERDICT_TONE[a.verdict]}>{a.verdict}</Badge>
-                </span>
-              }
-            >
-              <p className="text-sm">
-                <Linked text={a.reasoning} />
-              </p>
-              <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-                <RefList label="Claims" ids={a.claim_ids} />
-                <RefList label="Challenges" ids={a.challenge_ids} />
-              </div>
-            </Expandable>
-          </li>
-        ))}
-      </ul>
-
-      {wc.changes.length > 0 && (
-        <>
-          <h3 className="mt-6 text-sm font-semibold">How the thesis moved</h3>
-          <ul className="mt-2 space-y-3">
-            {wc.changes.map((ch, i) => (
-              <li key={i}>
-                <Card>
-                  <p className="text-sm text-muted line-through decoration-muted/50">
-                    <Linked text={ch.from} />
-                  </p>
-                  <p className="mt-1 text-sm">
-                    → <Linked text={ch.to} />
-                  </p>
-                  <p className="mt-2 text-sm text-muted">
-                    <Linked text={ch.reason} />
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-                    <RefList label="Because of" ids={[...ch.challenge_ids, ...ch.claim_ids]} />
-                  </div>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-
-      {wc.unresolved.length > 0 && (
-        <>
-          <h3 className="mt-6 mb-2 text-sm font-semibold">The evidence can&apos;t settle</h3>
-          <Bullets items={wc.unresolved} />
-        </>
-      )}
-    </Section>
-  );
-}
-
-function Expandable({ summary, children }: { summary: ReactNode; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="p-3">
-      {/* A div, not a button: the summary contains ref chips, which are buttons themselves. */}
-      <div
-        role="button"
-        tabIndex={0}
-        aria-expanded={open}
-        onClick={(e) => (e.target as HTMLElement).closest("button") || setOpen(!open)}
-        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && e.target === e.currentTarget && (e.preventDefault(), setOpen(!open))}
-        className="flex cursor-pointer items-start gap-2 text-sm"
-      >
-        <span className="mt-0.5 w-3 shrink-0 text-muted print:hidden">{open ? "▾" : "▸"}</span>
-        <span className="flex-1">{summary}</span>
-      </div>
-      <div className={`mt-2 pl-5 ${open ? "" : "hidden print:block"}`}>{children}</div>
     </div>
   );
 }
 
-function StressTest({ project }: { project: ResearchProject }) {
-  const st = project.stress_test;
-  if (!st) return null;
-  const challenges = [...st.challenges].sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
-  return (
-    <Section id="stress-test" title="Stress test" aside="A skeptical investor's attack on the initial thesis">
-      <ul className="space-y-3">
-        {challenges.map((x) => (
-          <li key={x.id}>
-            <Card>
-              <div className="flex flex-wrap items-center gap-2">
-                <Ref id={x.id} />
-                <Badge tone={SEVERITY_TONE[x.severity]}>{x.severity}</Badge>
-                <span className="text-xs text-muted">{human(x.kind)}</span>
-              </div>
-              <p className="mt-2 text-sm leading-relaxed">
-                <Linked text={x.text} />
-              </p>
-              <div className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
-                <RefList label="Attacks" ids={x.target_assumption_ids} />
-                <RefList label="Evidence" ids={x.claim_ids} />
-              </div>
-            </Card>
-          </li>
-        ))}
-      </ul>
+// ---------------------------------------------------------------------------------------
+// Reasoning: the stress test, how each assumption held up, and the first thesis
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {st.failure_conditions.length > 0 && (
-          <Card>
-            <h3 className="mb-2 text-sm font-semibold">The thesis fails if…</h3>
-            <Bullets items={st.failure_conditions} />
-          </Card>
-        )}
-        {st.missing_evidence.length > 0 && (
-          <Card>
-            <h3 className="mb-2 text-sm font-semibold">Missing evidence</h3>
-            <ul className="space-y-2 text-sm">
-              {st.missing_evidence.map((m, i) => (
-                <li key={i}>
-                  <Linked text={m.question} />
-                  <p className="text-muted">
-                    <Linked text={m.why_it_matters} />
-                  </p>
+function ReasoningView({ project }: { project: ResearchProject }) {
+  const t = project.thesis;
+  const st = project.stress_test;
+  const re = project.reevaluation;
+  if (!t) return <Waiting>The reasoning appears here as soon as the first thesis is formed.</Waiting>;
+  const assumptionText = (id: string) => t.assumptions.find((a) => a.id === id)?.text ?? "";
+
+  return (
+    <div className="space-y-10">
+      <section>
+        <Heading aside={<ConfidenceBadge level={t.confidence} />}>The first answer</Heading>
+        <p className="leading-relaxed">{stripRefs(t.statement)}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">{stripRefs(t.confidence_rationale)}</p>
+        <div className="mt-3">
+          <EvidenceLink label="the first answer" ids={t.supporting_claim_ids} text={t.confidence_rationale} />
+        </div>
+      </section>
+
+      {st ? (
+        <section>
+          <Heading aside="A skeptical investor's attack on the first answer">Stress test</Heading>
+          <ol className="space-y-3">
+            {[...st.challenges]
+              .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
+              .map((x) => (
+                <li key={x.id}>
+                  <Card>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={SEVERITY_TONE[x.severity]}>{x.severity}</Badge>
+                      <span className="text-xs text-muted">{human(x.kind)}</span>
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed">{stripRefs(x.text)}</p>
+                    {x.target_assumption_ids.length > 0 && (
+                      <p className="mt-2 text-xs text-muted">
+                        Challenges: {x.target_assumption_ids.map((id) => `“${assumptionText(id)}”`).join(" · ")}
+                      </p>
+                    )}
+                    <div className="mt-3">
+                      <EvidenceLink label="this challenge" ids={x.claim_ids} text={x.text} />
+                    </div>
+                  </Card>
                 </li>
               ))}
-            </ul>
-          </Card>
-        )}
-      </div>
-    </Section>
+          </ol>
+        </section>
+      ) : (
+        <Waiting>The stress test is running.</Waiting>
+      )}
+
+      <section>
+        <Heading aside={re ? "Re-judged after the stress test" : "Waiting for the re-evaluation"}>Assumptions</Heading>
+        <ul className="divide-y divide-line rounded-xl border border-line">
+          {t.assumptions.map((a) => {
+            const verdict = re?.assessments.find((x) => x.assumption_id === a.id);
+            return (
+              <li key={a.id} className="p-4">
+                <div className="flex items-start gap-3">
+                  <p className="flex-1 text-sm font-medium leading-relaxed">{a.text}</p>
+                  {verdict && <Badge tone={VERDICT_TONE[verdict.verdict]}>{verdict.verdict}</Badge>}
+                </div>
+                {verdict && <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(verdict.reasoning)}</p>}
+                <div className="mt-3">
+                  <EvidenceLink label={`“${a.text}”`} ids={[a.id, ...(verdict?.challenge_ids ?? [])]} text={verdict?.reasoning} />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      {st && (st.failure_conditions.length > 0 || st.missing_evidence.length > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {st.failure_conditions.length > 0 && (
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold">The answer fails if…</h3>
+              <Bullets items={st.failure_conditions} />
+            </Card>
+          )}
+          {st.missing_evidence.length > 0 && (
+            <Card>
+              <h3 className="mb-3 text-sm font-semibold">Missing evidence</h3>
+              <ul className="space-y-3 text-sm leading-relaxed">
+                {st.missing_evidence.map((m, i) => (
+                  <li key={i}>
+                    {stripRefs(m.question)}
+                    <p className="mt-0.5 text-muted">{stripRefs(m.why_it_matters)}</p>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {re && re.unresolved.length > 0 && (
+        <section>
+          <Heading>What the evidence can&apos;t settle</Heading>
+          <Bullets items={re.unresolved} />
+        </section>
+      )}
+
+      <Log project={project} />
+    </div>
   );
 }
 
-function Thesis({ project }: { project: ResearchProject }) {
-  const t = project.thesis;
-  if (!t) return null;
+function Log({ project }: { project: ResearchProject }) {
+  if (project.audit.length === 0) return null;
+  const warnings = project.audit.reduce((n, a) => n + a.warnings.length, 0);
   return (
-    <Section id="thesis" title="Initial thesis" aside={<ConfidenceBadge level={t.confidence} />}>
-      <p className="leading-relaxed">
-        <Linked text={t.statement} />
-      </p>
-      <p className="mt-2 text-sm text-muted">
-        <Linked text={t.confidence_rationale} />
-      </p>
-      <RefList label="Supported by" ids={t.supporting_claim_ids} />
-
-      <h3 className="mt-6 text-sm font-semibold">Load-bearing assumptions</h3>
-      <ul className="mt-2 space-y-2">
-        {t.assumptions.map((a) => (
-          <li key={a.id} className="flex items-start gap-2 text-sm">
-            <Ref id={a.id} />
-            <span className="flex-1">
-              {a.text} {a.supporting_claim_ids.length === 0 && <span className="text-warn">(no supporting evidence)</span>}
-              <span className="ml-1">
-                <RefList ids={a.supporting_claim_ids} />
+    <details className="rounded-xl border border-line p-4 text-sm print:hidden">
+      <summary className="cursor-pointer font-medium">
+        Technical log <span className="font-normal text-muted">· {warnings ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "no warnings"}</span>
+      </summary>
+      <ul className="mt-3 space-y-3">
+        {project.audit.map((a) => (
+          <li key={a.stage}>
+            <p>
+              <span className="font-medium">{STAGES.find((s) => s.key === a.stage)?.label}</span>{" "}
+              <span className="text-xs text-muted">
+                {(a.duration_ms / 1000).toFixed(1)}s{a.model ? ` · ${a.model}` : " · assembled, no model call"}
               </span>
-            </span>
+            </p>
+            {a.warnings.map((w) => (
+              <p key={w} className="mt-1 text-xs text-warn">
+                {w}
+              </p>
+            ))}
           </li>
         ))}
       </ul>
-
-      {t.uncertainties.length > 0 && (
-        <>
-          <h3 className="mt-6 mb-2 text-sm font-semibold">Uncertainties it admitted up front</h3>
-          <Bullets items={t.uncertainties} />
-        </>
-      )}
-    </Section>
+    </details>
   );
 }
+
+// ---------------------------------------------------------------------------------------
+// Evidence: every fact, its exact source quote, and the sources
 
 const STANCES = ["all", "supports", "challenges", "neutral"] as const;
 
-function Evidence({ project }: { project: ResearchProject }) {
+function EvidenceView({ project, focus, clearFocus }: { project: ResearchProject; focus: Focus; clearFocus: () => void }) {
   const r = project.research;
   const [stance, setStance] = useState<(typeof STANCES)[number]>("all");
-  if (!r) return null;
-  const count = (s: (typeof STANCES)[number]) => (s === "all" ? r.claims.length : r.claims.filter((c) => c.stance === s).length);
+  const trace = useTrace();
+  if (!r) return <Waiting>The evidence appears here once the research stage finishes.</Waiting>;
+
+  const sourceById = new Map(r.sources.map((s) => [s.id, s]));
+  const inFocus = (c: Claim) => !focus || focus.claimIds.includes(c.id);
+  const shown = (c: Claim) => inFocus(c) && (stance === "all" || c.stance === stance);
+  const count = (s: (typeof STANCES)[number]) => r.claims.filter((c) => inFocus(c) && (s === "all" || c.stance === s)).length;
 
   return (
-    <Section id="evidence" title="Evidence" aside={`${r.claims.length} claims from ${r.sources.length} sources`}>
-      {r.fact_check && <FactCheckSummary check={r.fact_check} />}
-      <SourceMix sources={r.sources} />
-      <div className="flex flex-wrap gap-2 print:hidden" role="group" aria-label="Filter claims by stance">
-        {STANCES.map((s) => (
-          <button
-            key={s}
-            type="button"
-            aria-pressed={stance === s}
-            onClick={() => setStance(s)}
-            className={`rounded-full border px-3 py-1 text-sm ${stance === s ? "border-foreground bg-foreground text-background" : "border-line text-muted hover:text-foreground"}`}
-          >
-            {s === "all" ? "All" : s === "supports" ? "For" : s === "challenges" ? "Against" : "Neutral"} · {count(s)}
-          </button>
-        ))}
-      </div>
+    <div className="space-y-8">
+      <section>
+        <Heading aside={`${r.claims.length} facts from ${r.sources.length} sources`}>Evidence</Heading>
+        {r.fact_check && <FactCheckSummary check={r.fact_check} />}
+        <SourceMix sources={r.sources} />
+      </section>
 
-      <ul className="mt-4 divide-y divide-line rounded-lg border border-line">
-        {r.claims.map((c) => (
-          <li key={c.id} className={`items-start gap-2 p-3 text-sm ${stance === "all" || c.stance === stance ? "flex" : "hidden print:flex"}`}>
-            <Ref id={c.id} />
-            <div className="flex-1">
-              <p>{c.text}</p>
-              {c.quotes?.map((q, i) => (
-                <blockquote key={i} className="mt-1.5 border-l-2 border-line pl-2 text-muted">
-                  &ldquo;{q.text}&rdquo; <Ref id={q.source_id} />
-                </blockquote>
-              ))}
-              <p className="mt-1.5 flex flex-wrap items-center gap-2">
-                <Badge tone={STANCE_TONE[c.stance]}>{c.stance === "supports" ? "for" : c.stance === "challenges" ? "against" : "neutral"}</Badge>
-                <span className="text-xs text-muted">{human(c.category)}</span>
-                {r.sources.every((s) => s.flags) && weakOnly(c, r.sources) && <Badge tone="warn">weak sources only</Badge>}
-                {c.unmatched_numbers?.length > 0 && (
-                  <Badge tone="warn">figures not in source: {c.unmatched_numbers.join(", ")}</Badge>
-                )}
-                {/* Projects saved before fact checking have no quotes; show their sources instead. */}
-                {!c.quotes && <RefList ids={c.source_ids} />}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <section>
+        {focus && (
+          <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-info-soft px-4 py-3 text-sm text-info print:hidden">
+            <span className="flex-1">
+              Showing the {focus.claimIds.length} fact{focus.claimIds.length === 1 ? "" : "s"} behind {focus.label}
+            </span>
+            <button type="button" onClick={clearFocus} className="font-medium underline underline-offset-2">
+              Show all
+            </button>
+          </div>
+        )}
 
-      <h3 className="mt-6 text-sm font-semibold">Sources</h3>
-      <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-        {r.sources.map((s) => (
-          <li key={s.id} className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
-            <Ref id={s.id} />
-            <div className="min-w-0 flex-1">
-              <a href={s.url} target="_blank" rel="noreferrer" className="line-clamp-2 hover:underline">
+        <div className="flex flex-wrap gap-2 print:hidden" role="group" aria-label="Filter facts by stance">
+          {STANCES.map((s) => (
+            <button
+              key={s}
+              type="button"
+              aria-pressed={stance === s}
+              onClick={() => setStance(s)}
+              className={`rounded-full border px-3 py-1 text-sm ${stance === s ? "border-foreground bg-foreground text-background" : "border-line text-muted hover:text-foreground"}`}
+            >
+              {s === "all" ? "All" : s === "supports" ? "For" : s === "challenges" ? "Against" : "Neutral"} · {count(s)}
+            </button>
+          ))}
+        </div>
+
+        <ul className="mt-4 space-y-3">
+          {r.claims.map((c) => (
+            <li key={c.id} className={shown(c) ? "block" : "hidden print:block"}>
+              <Card>
+                <p className="text-sm font-medium leading-relaxed">{c.text}</p>
+                {c.quotes?.map((q, i) => {
+                  const s = sourceById.get(q.source_id);
+                  return (
+                    <blockquote key={i} className="mt-2 border-l-2 border-line pl-3 text-sm leading-relaxed text-muted">
+                      &ldquo;{q.text}&rdquo;
+                      {s && (
+                        <a href={s.url} target="_blank" rel="noreferrer" className="ml-1 whitespace-nowrap text-xs text-info hover:underline">
+                          {s.publisher ?? "source"} ↗
+                        </a>
+                      )}
+                    </blockquote>
+                  );
+                })}
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Badge tone={STANCE_TONE[c.stance]}>{STANCE_LABEL[c.stance]}</Badge>
+                  <span className="text-xs text-muted">{human(c.category)}</span>
+                  {r.sources.every((s) => s.flags) && weakOnly(c, r.sources) && <Badge tone="warn">weak sources only</Badge>}
+                  {c.unmatched_numbers?.length > 0 && <Badge tone="warn">figures not in source: {c.unmatched_numbers.join(", ")}</Badge>}
+                  {/* Projects saved before fact checking have no quotes; name their sources instead. */}
+                  {!c.quotes && <span className="text-xs text-muted">{c.source_ids.map((id) => sourceById.get(id)?.publisher ?? id).join(", ")}</span>}
+                  <button
+                    type="button"
+                    onClick={() => trace(c.id)}
+                    className="ml-auto text-xs font-medium text-muted underline-offset-2 hover:text-foreground hover:underline print:hidden"
+                  >
+                    Where it&apos;s used
+                  </button>
+                </div>
+              </Card>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section>
+        <Heading>Sources</Heading>
+        <ul className="grid gap-2 sm:grid-cols-2">
+          {r.sources.map((s) => (
+            <li key={s.id} className="rounded-xl border border-line p-3 text-sm">
+              <a href={s.url} target="_blank" rel="noreferrer" className="line-clamp-2 font-medium hover:underline">
                 {s.title}
               </a>
-              <p className="mt-0.5 truncate text-xs text-muted">
-                {[s.publisher, s.published_date].filter(Boolean).join(" · ")}
-              </p>
+              <p className="mt-0.5 truncate text-xs text-muted">{[s.publisher, s.published_date].filter(Boolean).join(" · ")}</p>
               {s.kind && (
-                <p className="mt-1 flex flex-wrap gap-1">
+                <p className="mt-2 flex flex-wrap gap-1">
                   <Badge tone="neutral">{SOURCE_KIND_LABEL[s.kind]}</Badge>
                   {s.flags.map((f) => (
                     <Badge key={f} tone="warn">
@@ -492,20 +595,19 @@ function Evidence({ project }: { project: ResearchProject }) {
                   ))}
                 </p>
               )}
-            </div>
-          </li>
-        ))}
-      </ul>
-
-      <details className="mt-4 text-sm print:hidden">
-        <summary className="cursor-pointer text-muted">Search queries ({r.queries.length})</summary>
-        <ul className="mt-2 list-disc pl-5 text-muted">
-          {r.queries.map((q) => (
-            <li key={q}>{q}</li>
+            </li>
           ))}
         </ul>
-      </details>
-    </Section>
+        <details className="mt-4 text-sm print:hidden">
+          <summary className="cursor-pointer text-muted">Search queries ({r.queries.length})</summary>
+          <ul className="mt-2 list-disc pl-5 text-muted">
+            {r.queries.map((q) => (
+              <li key={q}>{q}</li>
+            ))}
+          </ul>
+        </details>
+      </section>
+    </div>
   );
 }
 
@@ -517,7 +619,7 @@ function SourceMix({ sources }: { sources: Source[] }) {
   const counts = KIND_ORDER.map((k) => [k, sources.filter((s) => s.kind === k).length] as const).filter(([, n]) => n > 0);
   const weak = sources.filter((s) => s.flags.length > 0).length;
   return (
-    <p className="mb-4 text-sm text-muted">
+    <p className="text-sm text-muted">
       <span className="font-medium text-foreground">Sources:</span> {counts.map(([k, n]) => `${n} ${SOURCE_KIND_LABEL[k]}`).join(" · ")}
       {weak > 0 && <span className="text-warn"> · {weak} flagged as weak</span>}
     </p>
@@ -527,45 +629,15 @@ function SourceMix({ sources }: { sources: Source[] }) {
 function FactCheckSummary({ check }: { check: NonNullable<ResearchProject["research"]>["fact_check"] }) {
   const { extracted, dropped, flagged } = check;
   return (
-    <p className="mb-4 rounded-lg bg-surface px-3 py-2 text-sm">
+    <p className="mb-3 rounded-xl bg-surface px-4 py-3 text-sm">
       <span className="font-medium">Fact-checked.</span>{" "}
       <span className="text-muted">
-        Each claim below is matched to the exact words in its source.{" "}
+        Each fact is matched to the exact words in its source.{" "}
         {dropped > 0
-          ? `${dropped} of ${extracted} extracted claims were dropped because their quotes weren't in the source.`
-          : `All ${extracted} extracted claims passed.`}
+          ? `${dropped} of ${extracted} extracted facts were dropped because their quotes weren't in the source.`
+          : `All ${extracted} extracted facts passed.`}
         {flagged > 0 && ` ${flagged} ${flagged === 1 ? "is" : "are"} flagged for figures their quote doesn't contain.`}
       </span>
     </p>
-  );
-}
-
-function Audit({ project }: { project: ResearchProject }) {
-  if (project.audit.length === 0) return null;
-  const warnings = project.audit.reduce((n, a) => n + a.warnings.length, 0);
-  return (
-    <Section id="audit" title="Reasoning log" aside={warnings ? `${warnings} warning${warnings === 1 ? "" : "s"}` : "No warnings"}>
-      <ul className="divide-y divide-line rounded-lg border border-line text-sm">
-        {project.audit.map((a) => (
-          <li key={a.stage} className="p-3">
-            <details>
-              <summary className="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-medium">{STAGES.find((s) => s.key === a.stage)?.label}</span>
-                <span className="text-xs text-muted">
-                  {(a.duration_ms / 1000).toFixed(1)}s{a.model ? ` · ${a.model}` : " · assembled, no model call"}
-                </span>
-                {a.warnings.length > 0 && <Badge tone="warn">{a.warnings.length} warning{a.warnings.length === 1 ? "" : "s"}</Badge>}
-              </summary>
-              {a.warnings.map((w) => (
-                <p key={w} className="mt-2 text-warn">
-                  {w}
-                </p>
-              ))}
-              <pre className="mt-2 max-h-96 overflow-auto rounded bg-surface p-2 text-xs print:hidden">{JSON.stringify(a.output, null, 2)}</pre>
-            </details>
-          </li>
-        ))}
-      </ul>
-    </Section>
   );
 }

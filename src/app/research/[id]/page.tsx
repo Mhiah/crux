@@ -17,7 +17,7 @@ export default async function ResearchPage(props: PageProps<"/research/[id]">) {
   if (!project) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10">
+    <main className="mx-auto w-full max-w-4xl px-5 py-10">
       <Link href="/" className="text-sm text-muted hover:text-foreground print:hidden">
         ← New question
       </Link>
