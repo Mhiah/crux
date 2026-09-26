@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crux | AI research that stress-tests its conclusions",
-  description: "Using SERV Reasoning, Crux forms a thesis, stress-tests it against the evidence, and audits it.",
+  title: "Crux | AI research that stress tests its own conclusions",
+  description: "Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it.",
 };
 
 // Applies a saved light/dark choice before first paint, so the page never flashes the wrong theme.
