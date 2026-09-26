@@ -66,3 +66,32 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* PDFs are always light, and keep badge colours (browsers drop backgrounds by default). */
+@media print {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+    --surface: #f7f7f6;
+    --muted: #5b5b5b;
+    --line: rgb(0 0 0 / 0.14);
+    --good: #15803d;
+    --good-soft: #dcfce7;
+    --warn: #a16207;
+    --warn-soft: #fef3c7;
+    --bad: #b91c1c;
+    --bad-soft: #fee2e2;
+    --info: #1d4ed8;
+    --info-soft: #dbeafe;
+    --accent: #6d28d9;
+    --accent-soft: #ede9fe;
+  }
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  li,
+  section > div {
+    break-inside: avoid;
+  }
+}
