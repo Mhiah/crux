@@ -57,7 +57,13 @@ export type Research = {
   sources: Source[];
   claims: Claim[];
   /** Outcome of checking every extracted claim's quotes against its sources. */
-  fact_check: { extracted: number; dropped: number; flagged: number };
+  fact_check: {
+    extracted: number;
+    dropped: number;
+    /** Duplicates folded into an earlier fact (absent in runs saved before merging existed). */
+    merged?: number;
+    flagged: number;
+  };
 };
 
 export type Assumption = {

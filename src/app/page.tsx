@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { HomeButton } from "@/components/home-button";
 import { SiteHeader } from "@/components/site-header";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
@@ -22,6 +22,8 @@ export default function Home() {
   const [project, setProject] = useState<ResearchProject | null>(null);
   const [mode, setMode] = useState<"live" | "mock" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Tapping the empty box fills the demo question once; after that a tap just edits.
+  const tapFilled = useRef(false);
 
   function handle(event: PipelineEvent) {
     if (event.type === "project") setMode(event.project.mode);
@@ -113,7 +115,10 @@ export default function Home() {
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
               onPointerDown={(e) => {
-                if (!question && e.pointerType === "touch") setQuestion(DEMO_QUESTION);
+                if (!question && e.pointerType === "touch" && !tapFilled.current) {
+                  tapFilled.current = true;
+                  setQuestion(DEMO_QUESTION);
+                }
               }}
               onKeyDown={(e) => {
                 if (!question && (e.key === "ArrowRight" || e.key === "Tab")) {

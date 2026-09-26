@@ -113,7 +113,7 @@ describe("runResearch", () => {
     expect(claims.some((c) => c.text.startsWith("90%"))).toBe(false);
     expect(claims[1].unmatched_numbers).toEqual(["80"]);
     expect(claims[2].source_ids).toEqual(["S5"]);
-    expect(project.research!.fact_check).toEqual({ extracted: 4, dropped: 1, flagged: 1 });
+    expect(project.research!.fact_check).toEqual({ extracted: 4, dropped: 1, merged: 0, flagged: 1 });
 
     const warnings = project.audit[0].warnings;
     expect(warnings.some((w) => w.includes("isn't in S2's text"))).toBe(true);

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { RefsProvider, useTrace } from "./refs";
-import { claimsBehind, refsIn, stripRefs } from "@/lib/plain";
+import { claimsBehind, factCheckSummary, recordIds, refsIn, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
 import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type ResearchProject, type Source, type Stage } from "@/lib/types";
 
@@ -65,10 +65,11 @@ function Heading({ children, aside }: { children: ReactNode; aside?: ReactNode }
 }
 
 function Bullets({ items }: { items: string[] }) {
+  const { plain } = useNav();
   return (
     <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed">
       {items.map((item, i) => (
-        <li key={i}>{stripRefs(item)}</li>
+        <li key={i}>{plain(item)}</li>
       ))}
     </ul>
   );
@@ -102,7 +103,13 @@ export function Progress({ project, active }: { project: ResearchProject | null;
 
 type View = "answer" | "reasoning" | "evidence";
 type Focus = { label: string; claimIds: string[] } | null;
-type Nav = { project: ResearchProject; go: (view: View) => void; showEvidence: (label: string, ids: string[]) => void };
+type Nav = {
+  project: ResearchProject;
+  go: (view: View) => void;
+  showEvidence: (label: string, ids: string[]) => void;
+  /** Text with this run's record IDs (C1, X2, ...) replaced by plain words. */
+  plain: (text: string) => string;
+};
 
 const NavCtx = createContext<Nav | null>(null);
 const useNav = () => useContext(NavCtx)!;
@@ -144,9 +151,11 @@ export function Workstation({ project, downloadable = true }: { project: Researc
     if (next !== "evidence") setFocus(null);
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  const known = recordIds(project);
   const nav: Nav = {
     project,
     go,
+    plain: (text) => stripRefs(text, known),
     showEvidence: (label, claimIds) => {
       setFocus({ label, claimIds });
       go("evidence");
@@ -276,6 +285,7 @@ function NextButton({ to, children }: { to: View; children: ReactNode }) {
 // Answer: the conclusion, what changed, and what to do next
 
 function AnswerView({ project }: { project: ResearchProject }) {
+  const { plain } = useNav();
   const c = project.conclusion;
   const wc = project.what_changed;
   const verdict = project.reevaluation?.thesis_verdict;
@@ -288,8 +298,8 @@ function AnswerView({ project }: { project: ResearchProject }) {
           <ConfidenceBadge level={c.confidence} />
           {verdict && <Badge tone={THESIS_TONE[verdict]}>thesis {verdict} by the stress test</Badge>}
         </div>
-        <p className="mt-4 text-xl leading-relaxed font-medium tracking-tight sm:text-2xl">{stripRefs(c.final_statement)}</p>
-        <p className="mt-4 leading-relaxed text-muted">{stripRefs(c.confidence_rationale)}</p>
+        <p className="mt-4 text-xl leading-relaxed font-medium tracking-tight sm:text-2xl">{plain(c.final_statement)}</p>
+        <p className="mt-4 leading-relaxed text-muted">{plain(c.confidence_rationale)}</p>
         <div className="mt-4">
           <EvidenceLink label="the answer" ids={[...c.key_supporting_claim_ids, ...c.key_challenging_claim_ids]} text={c.confidence_rationale} />
         </div>
@@ -304,14 +314,14 @@ function AnswerView({ project }: { project: ResearchProject }) {
                 <h3 className="text-sm font-semibold text-muted">First answer</h3>
                 <ConfidenceBadge level={wc.initial.confidence} />
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(wc.initial.statement)}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{plain(wc.initial.statement)}</p>
             </Card>
             <Card className="border-foreground/25">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-sm font-semibold">After the stress test</h3>
                 <ConfidenceBadge level={wc.final.confidence} />
               </div>
-              <p className="mt-2 text-sm leading-relaxed">{stripRefs(wc.final.statement)}</p>
+              <p className="mt-2 text-sm leading-relaxed">{plain(wc.final.statement)}</p>
             </Card>
           </div>
 
@@ -322,11 +332,11 @@ function AnswerView({ project }: { project: ResearchProject }) {
                 {wc.changes.map((ch, i) => (
                   <li key={i}>
                     <Card>
-                      <p className="text-sm text-muted line-through decoration-muted/40">{stripRefs(ch.from)}</p>
-                      <p className="mt-1 text-sm font-medium">→ {stripRefs(ch.to)}</p>
-                      <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(ch.reason)}</p>
+                      <p className="text-sm text-muted line-through decoration-muted/40">{plain(ch.from)}</p>
+                      <p className="mt-1 text-sm font-medium">→ {plain(ch.to)}</p>
+                      <p className="mt-2 text-sm leading-relaxed text-muted">{plain(ch.reason)}</p>
                       <div className="mt-3">
-                        <EvidenceLink label={`“${stripRefs(ch.to)}”`} ids={[...ch.claim_ids, ...ch.challenge_ids]} text={ch.reason} />
+                        <EvidenceLink label={`“${plain(ch.to)}”`} ids={[...ch.claim_ids, ...ch.challenge_ids]} text={ch.reason} />
                       </div>
                     </Card>
                   </li>
@@ -345,8 +355,8 @@ function AnswerView({ project }: { project: ResearchProject }) {
           <ol className="mt-3 list-decimal space-y-3 pl-5 text-sm leading-relaxed">
             {c.next_validation_steps.map((s, i) => (
               <li key={i}>
-                {stripRefs(s.step)}
-                <p className="mt-0.5 text-muted">Settles: {stripRefs(s.resolves)}</p>
+                {plain(s.step)}
+                <p className="mt-0.5 text-muted">Settles: {plain(s.resolves)}</p>
               </li>
             ))}
           </ol>
@@ -369,18 +379,19 @@ function AnswerView({ project }: { project: ResearchProject }) {
 // Reasoning: the stress test, how each assumption held up, and the first thesis
 
 function ReasoningView({ project }: { project: ResearchProject }) {
+  const { plain } = useNav();
   const t = project.thesis;
   const st = project.stress_test;
   const re = project.reevaluation;
   if (!t) return <Waiting>The reasoning appears here as soon as the first thesis is formed.</Waiting>;
-  const assumptionText = (id: string) => stripRefs(t.assumptions.find((a) => a.id === id)?.text ?? "");
+  const assumptionText = (id: string) => plain(t.assumptions.find((a) => a.id === id)?.text ?? "");
 
   return (
     <div className="space-y-10">
       <section>
         <Heading aside={<ConfidenceBadge level={t.confidence} />}>The first answer</Heading>
-        <p className="leading-relaxed">{stripRefs(t.statement)}</p>
-        <p className="mt-3 text-sm leading-relaxed text-muted">{stripRefs(t.confidence_rationale)}</p>
+        <p className="leading-relaxed">{plain(t.statement)}</p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">{plain(t.confidence_rationale)}</p>
         <div className="mt-3">
           <EvidenceLink label="the first answer" ids={t.supporting_claim_ids} text={t.confidence_rationale} />
         </div>
@@ -399,7 +410,7 @@ function ReasoningView({ project }: { project: ResearchProject }) {
                       <Badge tone={SEVERITY_TONE[x.severity]}>{x.severity}</Badge>
                       <span className="text-xs text-muted">{human(x.kind)}</span>
                     </div>
-                    <p className="mt-2 text-sm leading-relaxed">{stripRefs(x.text)}</p>
+                    <p className="mt-2 text-sm leading-relaxed">{plain(x.text)}</p>
                     {x.target_assumption_ids.length > 0 && (
                       <p className="mt-2 text-xs text-muted">
                         Challenges: {x.target_assumption_ids.map((id) => `“${assumptionText(id)}”`).join(" · ")}
@@ -425,12 +436,12 @@ function ReasoningView({ project }: { project: ResearchProject }) {
             return (
               <li key={a.id} className="p-4">
                 <div className="flex items-start gap-3">
-                  <p className="flex-1 text-sm font-medium leading-relaxed">{stripRefs(a.text)}</p>
+                  <p className="flex-1 text-sm font-medium leading-relaxed">{plain(a.text)}</p>
                   {verdict && <Badge tone={VERDICT_TONE[verdict.verdict]}>{verdict.verdict}</Badge>}
                 </div>
-                {verdict && <p className="mt-2 text-sm leading-relaxed text-muted">{stripRefs(verdict.reasoning)}</p>}
+                {verdict && <p className="mt-2 text-sm leading-relaxed text-muted">{plain(verdict.reasoning)}</p>}
                 <div className="mt-3">
-                  <EvidenceLink label={`“${stripRefs(a.text)}”`} ids={[a.id, ...(verdict?.challenge_ids ?? [])]} text={verdict?.reasoning} />
+                  <EvidenceLink label={`“${plain(a.text)}”`} ids={[a.id, ...(verdict?.challenge_ids ?? [])]} text={verdict?.reasoning} />
                 </div>
               </li>
             );
@@ -452,8 +463,8 @@ function ReasoningView({ project }: { project: ResearchProject }) {
               <ul className="space-y-3 text-sm leading-relaxed">
                 {st.missing_evidence.map((m, i) => (
                   <li key={i}>
-                    {stripRefs(m.question)}
-                    <p className="mt-0.5 text-muted">{stripRefs(m.why_it_matters)}</p>
+                    {plain(m.question)}
+                    <p className="mt-0.5 text-muted">{plain(m.why_it_matters)}</p>
                   </li>
                 ))}
               </ul>
@@ -509,6 +520,7 @@ function Log({ project }: { project: ResearchProject }) {
 const STANCES = ["all", "supports", "challenges", "neutral"] as const;
 
 function EvidenceView({ project, focus, clearFocus }: { project: ResearchProject; focus: Focus; clearFocus: () => void }) {
+  const { plain } = useNav();
   const r = project.research;
   const [stance, setStance] = useState<(typeof STANCES)[number]>("all");
   const trace = useTrace();
@@ -563,7 +575,7 @@ function EvidenceView({ project, focus, clearFocus }: { project: ResearchProject
           {r.claims.map((c) => (
             <li key={c.id} className={shown(c) ? "block" : "hidden print:block"}>
               <Card>
-                <p className="text-sm font-medium leading-relaxed">{stripRefs(c.text)}</p>
+                <p className="text-sm font-medium leading-relaxed">{plain(c.text)}</p>
                 {c.quotes?.map((q, i) => {
                   const s = sourceById.get(q.source_id);
                   return (
@@ -649,16 +661,12 @@ function SourceMix({ sources }: { sources: Source[] }) {
 }
 
 function FactCheckSummary({ check }: { check: NonNullable<ResearchProject["research"]>["fact_check"] }) {
-  const { extracted, dropped, flagged } = check;
   return (
     <p className="mb-3 rounded-xl bg-surface px-4 py-3 text-sm">
       <span className="font-medium">Fact-checked.</span>{" "}
       <span className="text-muted">
         Each fact is matched to the exact words in its source.{" "}
-        {dropped > 0
-          ? `${dropped} of ${extracted} extracted facts were dropped because their quotes weren't in the source.`
-          : `All ${extracted} extracted facts passed.`}
-        {flagged > 0 && ` ${flagged} ${flagged === 1 ? "is" : "are"} flagged for figures their quote doesn't contain.`}
+        {factCheckSummary(check)}
       </span>
     </p>
   );

@@ -1,6 +1,6 @@
 import { Document, Font, Link, Page, StyleSheet, Text, View, pdf } from "@react-pdf/renderer";
 import type { ReactNode } from "react";
-import { stripRefs } from "@/lib/plain";
+import { factCheckSummary, recordIds, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL } from "@/lib/research/sources";
 import type { AssumptionVerdict, Challenge, Confidence, ResearchProject } from "@/lib/types";
 
@@ -109,8 +109,10 @@ const date = (iso: string) =>
   `${new Date(iso).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC`;
 
 export function ReportDocument({ project }: { project: ResearchProject }) {
+  const known = recordIds(project);
+  const plain = (text: string) => stripRefs(text, known);
   const { thesis: t, stress_test: st, reevaluation: re, conclusion: c, what_changed: wc, research: r } = project;
-  const assumptionText = (id: string) => stripRefs(t?.assumptions.find((a) => a.id === id)?.text ?? "");
+  const assumptionText = (id: string) => plain(t?.assumptions.find((a) => a.id === id)?.text ?? "");
   const sourceNumber = new Map(r?.sources.map((src, i) => [src.id, i + 1]));
   const footer = <Footer question={project.question} />;
 
@@ -131,8 +133,8 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
               <Pill tone={CONFIDENCE_TONE[c.confidence]}>{c.confidence} confidence</Pill>
               {re && <Pill tone={THESIS_TONE[re.thesis_verdict]}>thesis {re.thesis_verdict} by the stress test</Pill>}
             </View>
-            <Text style={s.answer}>{stripRefs(c.final_statement)}</Text>
-            <Text style={[s.muted, { marginTop: 6 }]}>{stripRefs(c.confidence_rationale)}</Text>
+            <Text style={s.answer}>{plain(c.final_statement)}</Text>
+            <Text style={[s.muted, { marginTop: 6 }]}>{plain(c.confidence_rationale)}</Text>
           </View>
         )}
 
@@ -142,11 +144,11 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
               <View key="compare" style={s.row}>
                 <View style={[s.card, s.col]}>
                   <Text style={[s.h3, s.muted]}>First answer · {wc.initial.confidence} confidence</Text>
-                  <Text style={s.muted}>{stripRefs(wc.initial.statement)}</Text>
+                  <Text style={s.muted}>{plain(wc.initial.statement)}</Text>
                 </View>
                 <View style={[s.card, s.col, { borderColor: "#bdbdb8" }]}>
                   <Text style={s.h3}>After the stress test · {wc.final.confidence} confidence</Text>
-                  <Text>{stripRefs(wc.final.statement)}</Text>
+                  <Text>{plain(wc.final.statement)}</Text>
                 </View>
               </View>,
               wc.changes.length === 0 ? (
@@ -157,9 +159,9 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
                 <Group key="why" heading={<Text style={[s.h3, { marginTop: 8 }]}>Why it changed</Text>}>
                   {wc.changes.map((ch, i) => (
                     <Card key={i}>
-                      <Text style={[s.muted, { textDecoration: "line-through" }]}>{stripRefs(ch.from)}</Text>
-                      <Text style={{ fontWeight: 600, marginTop: 2 }}>→ {stripRefs(ch.to)}</Text>
-                      <Text style={[s.muted, { marginTop: 3 }]}>{stripRefs(ch.reason)}</Text>
+                      <Text style={[s.muted, { textDecoration: "line-through" }]}>{plain(ch.from)}</Text>
+                      <Text style={{ fontWeight: 600, marginTop: 2 }}>→ {plain(ch.to)}</Text>
+                      <Text style={[s.muted, { marginTop: 3 }]}>{plain(ch.reason)}</Text>
                     </Card>
                   ))}
                 </Group>
@@ -174,14 +176,14 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
               {bullets(
                 c.next_validation_steps.map((step, i) => (
                   <View key={i}>
-                    <Text>{stripRefs(step.step)}</Text>
-                    <Text style={s.small}>Settles: {stripRefs(step.resolves)}</Text>
+                    <Text>{plain(step.step)}</Text>
+                    <Text style={s.small}>Settles: {plain(step.resolves)}</Text>
                   </View>
                 )),
                 true,
               )}
             </Group>
-            <Group heading={<H2>Still uncertain</H2>}>{bullets(c.uncertainties.map(stripRefs))}</Group>
+            <Group heading={<H2>Still uncertain</H2>}>{bullets(c.uncertainties.map(plain))}</Group>
           </>
         )}
       </Page>
@@ -191,8 +193,8 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
           {footer}
           <Text style={s.eyebrow}>Reasoning</Text>
           <H2>The first answer · {t.confidence} confidence</H2>
-          <Text>{stripRefs(t.statement)}</Text>
-          <Text style={[s.muted, { marginTop: 5 }]}>{stripRefs(t.confidence_rationale)}</Text>
+          <Text>{plain(t.statement)}</Text>
+          <Text style={[s.muted, { marginTop: 5 }]}>{plain(t.confidence_rationale)}</Text>
 
           {st && (
             <Group heading={<H2>Stress test</H2>}>
@@ -204,7 +206,7 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
                       <Pill tone={SEVERITY_TONE[x.severity]}>{x.severity}</Pill>
                       <Text style={s.small}>{human(x.kind)}</Text>
                     </View>
-                    <Text style={{ marginTop: 4 }}>{stripRefs(x.text)}</Text>
+                    <Text style={{ marginTop: 4 }}>{plain(x.text)}</Text>
                     {x.target_assumption_ids.length > 0 && (
                       <Text style={[s.small, { marginTop: 3 }]}>
                         Challenges: {x.target_assumption_ids.map((id) => `“${assumptionText(id)}”`).join(" · ")}
@@ -221,32 +223,32 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
               return (
                 <Card key={a.id}>
                   <View style={[s.row, { alignItems: "flex-start" }]}>
-                    <Text style={[s.col, { fontWeight: 600 }]}>{stripRefs(a.text)}</Text>
+                    <Text style={[s.col, { fontWeight: 600 }]}>{plain(a.text)}</Text>
                     {v && <Pill tone={VERDICT_TONE[v.verdict]}>{v.verdict}</Pill>}
                   </View>
-                  {v && <Text style={[s.muted, { marginTop: 4 }]}>{stripRefs(v.reasoning)}</Text>}
+                  {v && <Text style={[s.muted, { marginTop: 4 }]}>{plain(v.reasoning)}</Text>}
                 </Card>
               );
             })}
           </Group>
 
           {st && st.failure_conditions.length > 0 && (
-            <Group heading={<H2>The answer fails if…</H2>}>{bullets(st.failure_conditions.map(stripRefs))}</Group>
+            <Group heading={<H2>The answer fails if…</H2>}>{bullets(st.failure_conditions.map(plain))}</Group>
           )}
           {st && st.missing_evidence.length > 0 && (
             <Group heading={<H2>Missing evidence</H2>}>
               {bullets(
                 st.missing_evidence.map((m, i) => (
                   <View key={i}>
-                    <Text>{stripRefs(m.question)}</Text>
-                    <Text style={s.small}>{stripRefs(m.why_it_matters)}</Text>
+                    <Text>{plain(m.question)}</Text>
+                    <Text style={s.small}>{plain(m.why_it_matters)}</Text>
                   </View>
                 )),
               )}
             </Group>
           )}
           {re && re.unresolved.length > 0 && (
-            <Group heading={<H2>What the evidence can&apos;t settle</H2>}>{bullets(re.unresolved.map(stripRefs))}</Group>
+            <Group heading={<H2>What the evidence can&apos;t settle</H2>}>{bullets(re.unresolved.map(plain))}</Group>
           )}
         </Page>
       )}
@@ -261,14 +263,12 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
           {r.fact_check && (
             <Text style={[s.muted, { marginBottom: 8 }]}>
               Fact-checked: each fact is matched to the exact words in its source.{" "}
-              {r.fact_check.dropped > 0
-                ? `${r.fact_check.dropped} of ${r.fact_check.extracted} extracted facts were dropped because their quotes weren't in the source.`
-                : `All ${r.fact_check.extracted} extracted facts passed.`}
+              {factCheckSummary(r.fact_check)}
             </Text>
           )}
           {r.claims.map((claim) => (
             <Card key={claim.id}>
-              <Text style={{ fontWeight: 600 }}>{stripRefs(claim.text)}</Text>
+              <Text style={{ fontWeight: 600 }}>{plain(claim.text)}</Text>
               {(claim.quotes ?? []).map((q, i) => (
                 <Text key={i} style={s.quote}>
                   “{q.text}” (source {sourceNumber.get(q.source_id) ?? "?"})

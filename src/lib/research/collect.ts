@@ -101,7 +101,8 @@ export async function collectResearch(
       warnings.push(`Search failed for "${queries[i]}": ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
       return [];
     }
-    return r.value.map((hit) => {
+    // Only web links: a result's URL becomes a clickable link in the report.
+    return r.value.filter((hit) => /^https?:\/\//i.test(hit.url)).map((hit) => {
       const kind = classifySource(hit.url);
       return {
         url: hit.url,
@@ -139,6 +140,7 @@ export async function collectResearch(
 
   const claims: Claim[] = [];
   let dropped = 0;
+  let merged = 0;
   for (const raw of extracted.output.claims) {
     const c = { ...raw, text: cleanClaimText(raw.text) };
     const label = `"${c.text.slice(0, 60)}…"`;
@@ -157,6 +159,7 @@ export async function collectResearch(
     // The same claim extracted twice becomes one claim with the quotes of both.
     const same = claims.find((x) => x.text.toLowerCase() === c.text.toLowerCase());
     if (same) {
+      merged++;
       for (const q of quotes) if (!same.quotes.some((v) => v.source_id === q.source_id && v.text === q.text)) same.quotes.push(q);
       same.source_ids = [...new Set(same.quotes.map((q) => q.source_id))];
       same.unmatched_numbers = unmatchedNumbers(same.text, same.quotes.map((q) => q.text));
@@ -181,6 +184,6 @@ export async function collectResearch(
     warnings.push("No evidence against a 'yes' answer survived extraction; the stress test has only reasoning to go on.");
   }
 
-  const fact_check = { extracted: extracted.output.claims.length, dropped, flagged: claims.filter((c) => c.unmatched_numbers.length).length };
+  const fact_check = { extracted: extracted.output.claims.length, dropped, merged, flagged: claims.filter((c) => c.unmatched_numbers.length).length };
   return { research: { queries, sources, claims, fact_check }, models, warnings };
 }
