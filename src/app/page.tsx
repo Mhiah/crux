@@ -5,11 +5,17 @@ import { useState } from "react";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
 
-const EXAMPLE = "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?";
+/** Tapping one fills the box; nothing runs (and no credits are spent) until you press the button. */
+const EXAMPLES = [
+  "Should we launch a stablecoin remittance app for the UK–Nigeria corridor?",
+  "Are small businesses actually willing to accept crypto payments?",
+  "Should we launch an AI bookkeeping SaaS for Nigerian SMEs?",
+  "Should a Web3 startup issue its own token before product-market fit?",
+];
 
 /** Ask a question and watch the report fill in stage by stage as the pipeline streams. */
 export default function Home() {
-  const [question, setQuestion] = useState(EXAMPLE);
+  const [question, setQuestion] = useState("");
   const [running, setRunning] = useState(false);
   const [active, setActive] = useState<Stage | null>(null);
   const [project, setProject] = useState<ResearchProject | null>(null);
@@ -61,60 +67,117 @@ export default function Home() {
   }
 
   const activeLabel = STAGES.find((s) => s.key === active)?.label;
+  const tooShort = question.trim().length < 10;
+
+  function newQuestion() {
+    setProject(null);
+    setError(null);
+    setMode(null);
+  }
+
+  const header = (
+    <header className="mx-auto flex w-full max-w-5xl items-center px-5 py-5 print:hidden">
+      <button type="button" onClick={newQuestion} disabled={running} className="text-xl font-semibold tracking-tight">
+        Crux
+      </button>
+      {project && !running && (
+        <button type="button" onClick={newQuestion} className="ml-auto rounded-lg border border-line px-3 py-1.5 text-sm hover:bg-surface">
+          New question
+        </button>
+      )}
+    </header>
+  );
+
+  // Landing: the name, what Crux does, and the question box.
+  if (!running && !project) {
+    return (
+      <>
+        {header}
+        <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
+          <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
+            Stress-test your next big decision.
+          </h1>
+          <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
+            Crux researches your question, forms a thesis, attacks it with SERV Reasoning, and shows you exactly what changed and why.
+          </p>
+
+          <form
+            className="mt-10 flex flex-col gap-3 rounded-2xl border border-line bg-surface p-2 shadow-sm sm:flex-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!tooShort) run();
+            }}
+          >
+            <input
+              className="min-w-0 flex-1 bg-transparent px-3 py-3 text-base focus:outline-none"
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              placeholder="Ask a hard business question…"
+              aria-label="Your question"
+              maxLength={500}
+            />
+            <button className="rounded-xl bg-foreground px-5 py-3 font-medium text-background transition disabled:opacity-40" disabled={tooShort}>
+              Find the crux
+            </button>
+          </form>
+
+          {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
+
+          <div className="mt-8">
+            <p className="text-center text-xs font-medium uppercase tracking-wider text-muted">Try one</p>
+            <ul className="mt-3 flex flex-wrap justify-center gap-2">
+              {EXAMPLES.map((q) => (
+                <li key={q}>
+                  <button
+                    type="button"
+                    onClick={() => setQuestion(q)}
+                    className="rounded-full border border-line px-3.5 py-2 text-left text-sm text-muted transition hover:border-foreground/30 hover:text-foreground"
+                  >
+                    {q}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <h1 className="text-2xl font-semibold print:hidden">Crux</h1>
-      <p className="mt-1 text-sm text-muted print:hidden">Forms a thesis, stress-tests it with SERV Reasoning, and shows what changed.</p>
+    <>
+      {header}
+      <main className="mx-auto w-full max-w-4xl px-5 pb-16">
+        <h1 className="text-2xl font-semibold leading-snug tracking-tight print:hidden">{question}</h1>
 
-      <form
-        className="mt-6 flex flex-col gap-3 sm:flex-row print:hidden"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (!running) run();
-        }}
-      >
-        <input
-          className="flex-1 rounded-lg border border-line bg-transparent px-3 py-2 focus:border-foreground/40 focus:outline-none"
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask a hard market or strategy question"
-          aria-label="Research question"
-        />
-        <button className="rounded-lg bg-foreground px-4 py-2 font-medium text-background disabled:opacity-50" disabled={running}>
-          {running ? "Researching…" : "Research"}
-        </button>
-      </form>
+        {mode === "mock" && (
+          <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn print:hidden">
+            Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made.
+          </p>
+        )}
 
-      {mode === "mock" && (
-        <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn print:hidden">
-          Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made.
-        </p>
-      )}
-
-      {(running || project) && (
         <div className="mt-6 space-y-2 print:hidden">
           <Progress project={project} active={active} />
           {running && activeLabel && <p className="text-sm text-muted">Working on {activeLabel.toLowerCase()}…</p>}
         </div>
-      )}
 
-      {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
+        {error && <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">{error}</p>}
 
-      {project && !running && project.status === "complete" && (
-        <p className="mt-4 text-sm print:hidden">
-          <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
-            Saved report
-          </Link>{" "}
-          <span className="text-muted">— reopen or share this run later.</span>
-        </p>
-      )}
+        {project && !running && project.status === "complete" && (
+          <p className="mt-4 text-sm print:hidden">
+            <Link href={`/research/${project.id}`} className="text-info underline underline-offset-2">
+              Saved report
+            </Link>{" "}
+            <span className="text-muted">— reopen or share this run later.</span>
+          </p>
+        )}
 
-      {project && (
-        <div className="mt-8">
-          <Workstation project={project} downloadable={!running} />
-        </div>
-      )}
-    </main>
+        {project && (
+          <div className="mt-8">
+            <Workstation project={project} downloadable={!running} />
+          </div>
+        )}
+      </main>
+    </>
   );
 }
