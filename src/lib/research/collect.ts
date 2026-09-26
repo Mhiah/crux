@@ -158,7 +158,7 @@ export async function collectResearch(
     for (const q of c.quotes ?? []) {
       const source = byId.get(q.source_id);
       if (!source) warnings.push(`Claim ${label} quoted unknown source ${q.source_id}; removed it.`);
-      else if (!quoteFound(q.text, source.excerpt)) warnings.push(`Claim ${label}: its quote isn't in ${q.source_id}'s text; removed that source.`);
+      else if (!quoteFound(q.text, source.excerpt)) warnings.push(`Claim ${label}: its quote isn't in ${q.source_id}'s text; removed that source. Quote: "${q.text.slice(0, 200)}"`);
       else if (!quotes.some((v) => v.source_id === q.source_id && v.text === q.text)) quotes.push({ source_id: q.source_id, text: q.text });
     }
     if (quotes.length === 0) {

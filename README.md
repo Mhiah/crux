@@ -20,14 +20,14 @@ Every number below is from a real run of the demo question on 26 September 2026,
 
    | Stage | What happens | Time |
    | --- | --- | --- |
-   | Research | SERV plans 8 searches (half of them hunting for evidence against), Tavily runs them, 20 sources are picked, SERV extracts facts and Crux checks every quote | 30.5 s |
-   | Thesis | SERV commits to a first answer and names the assumptions it rests on | 7.7 s |
-   | Stress test | SERV challenges the thesis: weak assumptions, contradicting evidence, other explanations, risks, missing evidence | 10.6 s |
-   | Re-evaluate | Every assumption is re-judged against the evidence and the challenges | 11.0 s |
-   | Conclusion | The best-supported answer, its confidence, what's uncertain and what to check next | 7.2 s |
+   | Research | SERV plans 8 searches (half of them hunting for evidence against), Tavily runs them plus 4 repeats on research and official sites, 20 sources are picked, SERV extracts facts and Crux checks every quote | 30.1 s |
+   | Thesis | SERV commits to a first answer and names the assumptions it rests on | 4.6 s |
+   | Stress test | SERV challenges the thesis: weak assumptions, contradicting evidence, other explanations, risks, missing evidence | 6.8 s |
+   | Re-evaluate | Every assumption is re-judged against the evidence and the challenges | 9.2 s |
+   | Conclusion | The best-supported answer, its confidence, what's uncertain and what to check next | 6.9 s |
    | What changed | Assembled from the recorded stages, no model call | 0 s |
 
-   About a minute in total, 6 SERV calls and 8 Tavily searches.
+   About a minute in total, 6 SERV calls and 12 Tavily searches.
 4. Read the **Answer**, then open **Reasoning** and **Evidence**. Anything backed by facts has an **Evidence** link that opens just those facts.
 5. Choose **Download** for the report as a PDF.
 
@@ -49,23 +49,23 @@ The first answer next to the answer after the stress test, and every material ch
 
 ![What changed: the first answer, the final answer, and why it moved](docs/screenshots/what-changed.png)
 
-In the demo run, the thesis was **weakened**: three changes, each backed by specific facts and challenges, turned "many merchants are willing, with conditions" into "some are, but not broadly, and stated willingness is not proof of adoption".
+In the demo run, the thesis was **weakened**: four changes, each backed by specific facts and challenges, turned "willing in principle, but acceptance lags" into "only a cautious, conditional yes: acceptance is low, and much of the evidence is about merchants in general rather than small businesses".
 
 ### Stress test
 
-SERV acts as a skeptical investor and challenges the first answer. Each challenge has a severity and a type, names the assumptions it targets, and links to its evidence. The demo run raised 7 challenges, 1 of them critical.
+SERV acts as a skeptical investor and challenges the first answer. Each challenge has a severity and a type, names the assumptions it targets, and links to its evidence. The demo run raised 6 challenges, 1 of them critical.
 
 ![The stress test](docs/screenshots/stress-test.png)
 
 ### Assumptions, re-judged
 
-Every assumption the thesis depends on gets a verdict: supported, weakened, contradicted or unresolved, with the reasoning. If the re-evaluation skips one, Crux marks it unresolved rather than letting it pass silently. In the demo run: 2 weakened, 2 supported.
+Every assumption the thesis depends on gets a verdict: supported, weakened, contradicted or unresolved, with the reasoning. If the re-evaluation skips one, Crux marks it unresolved rather than letting it pass silently. In the demo run: 3 weakened, 2 supported.
 
 ![Assumptions with their verdicts](docs/screenshots/assumptions.png)
 
 ### Evidence, fact-checked
 
-Every fact shows the exact words it came from, with a link to the source. The summary at the top says how many extracted facts were dropped because their quote wasn't in the source, and sources are labelled by type. The demo run kept all 30 facts it extracted (23 for, 6 against, 1 neutral) from 20 sources, and flagged 1 whose year wasn't in its quote.
+Every fact shows the exact words it came from, with a link to the source. The summary at the top says how many extracted facts were dropped because their quote wasn't in the source, and sources are labelled by type. The demo run kept 28 of the 31 facts it extracted (15 for, 7 against, 6 neutral) from 20 sources: 5 research, 1 official, 6 industry reports, 7 news and 1 company site. It flagged 1 fact whose sample size wasn't in its quote.
 
 ![The Evidence view](docs/screenshots/evidence.png)
 
@@ -99,7 +99,7 @@ Every reasoning step is a separate SERV Reasoning call (OpenAI-compatible chat c
 
 | Call | Input | Output |
 | --- | --- | --- |
-| Query plan | The question | 2 to 4 supporting and 3 to 4 challenging searches (the schema requires both) |
+| Query plan | The question | 2 to 4 supporting and 3 to 4 challenging searches (the schema requires both), aimed at original data |
 | Claims | The question and up to 20 source excerpts | Facts, each with the exact quote from its source, a category and a stance; plus each source's publisher type |
 | Thesis | The checked facts | A first answer, its confidence and why, the assumptions it depends on, the facts behind it |
 | Stress test | Facts and thesis | Challenges with type, severity, target assumptions and evidence; failure conditions; missing evidence |
@@ -148,6 +148,7 @@ A research tool is only useful if you can trust what it shows, so the rules belo
 | Figures must match | A figure a fact states (in digits) must appear in one of its quotes, as digits or words ("thirty-three" matches 33). If not, the fact is kept, flagged in the report, and passed to the later stages as unverified |
 | The case against is always searched for | The query-plan schema requires 3 to 4 challenging searches. They run interleaved with the supporting ones, and sources are picked search by search in turn, so a supporting search's higher relevance scores can't crowd them out |
 | A missing case against is called a gap, not proof | If no evidence against the answer survives, the later stages are told so explicitly, and the Evidence view says so |
+| Original data comes first | The search plan aims at surveys, studies, official statistics and research firms. The first 4 searches run again limited to about 120 research, official and industry-report sites. Within each search, those sources are picked before news, and news before company sites and blogs |
 | Weak sources count for less | Social posts and sources over three years old are flagged, only fill source slots the others leave open, and facts resting only on them are marked as weak evidence for the later stages and in the report |
 | Citations can't dangle | Every ID a stage cites is checked against the records that exist. Unknown ones are removed and logged, so every audit-trail link leads somewhere |
 | No assumption is skipped | The re-evaluation must judge every assumption; any it leaves out is recorded as unresolved |
@@ -158,9 +159,9 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 ## What was checked
 
-- **Live runs with SERV and Tavily.** Four live runs of the crypto question on 26 September 2026. From the second run on, after the balanced-research change, evidence went from 24 for and 0 against to a real case against (9 against in the third run, 6 in the fourth), and source types from "20 company / blog" to a mix of research, industry, news and company sources.
-- **The screenshots** are from the fourth run, made after the last round of fixes and shown exactly as it came back. All 30 extracted facts passed the quote check; 1 is flagged because it says "in 2026" while its quote doesn't give a year.
-- **Unit tests** (`npm test`, 66 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
+- **Live runs with SERV and Tavily.** Five live runs of the crypto question on 26 September 2026. The balanced-research change took the evidence from 24 for and 0 against to a real case against (6 to 9 facts against in each later run). The stronger-sources change took the source mix from 13 company or blog sites out of 20 to 1, with research, official statistics and industry reports making up 12.
+- **The screenshots** are from the fifth run, shown exactly as it came back. 3 of the 31 extracted facts were dropped because their quotes weren't in the source text (one rested on a Statista page whose figures sit behind a paywall), and 1 is flagged because it states a sample size its quote doesn't contain.
+- **Unit tests** (`npm test`, 68 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
 - **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
 
@@ -176,7 +177,7 @@ cp .env.example .env.local   # then add SERV_API_KEY and TAVILY_API_KEY
 npm run dev                  # open http://localhost:3000
 ```
 
-Each question uses about 6 SERV calls and 8 Tavily searches and takes around a minute.
+Each question uses about 6 SERV calls and 12 Tavily searches and takes around a minute.
 
 **On a phone:** keep the app running, connect the phone to the same Wi-Fi, and open the **Network** address that `npm run dev` prints (for example `http://192.168.0.3:3000`).
 
