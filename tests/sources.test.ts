@@ -119,17 +119,22 @@ describe("balanced research", () => {
   it("uses SERV's publisher label only for sites the address list doesn't know", async () => {
     const results = [hit("https://someobscurecryptonews.io/story", 0.9), hit("https://www.coindesk.com/story", 0.8), hit("https://unknown-vendor.com/x", 0.7)];
     const search: SearchProvider = { mode: "mock", search: async () => results };
+    // CoinDesk is recognised as news, so it's picked first.
     const labels = [
-      { source_id: "S1", kind: "news" },
-      { source_id: "S2", kind: "company_or_blog" }, // wrong, but CoinDesk is known: ignored
+      { source_id: "S1", kind: "company_or_blog" }, // wrong, but CoinDesk is known: ignored
+      { source_id: "S2", kind: "news" },
       { source_id: "S3", kind: "not-a-kind" }, // invalid: ignored
     ];
     const { research } = await collectResearch(
       "Question?",
-      reasoningWith({ queries: ["q"] }, [claim("A claim.", "S1", "Content for https://someobscurecryptonews.io/story")], labels),
+      reasoningWith({ queries: ["q"] }, [claim("A claim.", "S2", "Content for https://someobscurecryptonews.io/story")], labels),
       search,
     );
-    expect(research.sources.map((s) => s.kind)).toEqual(["news", "news", "company_or_blog"]);
+    expect(research.sources.map((s) => [s.publisher, s.kind])).toEqual([
+      ["coindesk.com", "news"],
+      ["someobscurecryptonews.io", "news"],
+      ["unknown-vendor.com", "company_or_blog"],
+    ]);
   });
 
   it("warns, and tells the later stages, when no counter-evidence was found", async () => {
@@ -146,6 +151,53 @@ describe("balanced research", () => {
     );
     expect(balanced.warnings).toEqual([]);
     expect(formatEvidence("Question?", balanced.research)).not.toContain("gap in the evidence");
+  });
+});
+
+describe("stronger sources", () => {
+  const plan = { supporting_queries: ["demand 1", "demand 2", "demand 3"], challenging_queries: ["risk 1", "risk 2", "risk 3"] };
+  const reasoning: ReasoningProvider = {
+    mode: "mock",
+    async reason<T>(req: ReasonRequest) {
+      const output =
+        req.step === "query_plan"
+          ? plan
+          : { claims: [{ text: "A claim.", quotes: [{ source_id: "S1", text: "Content for https://blog-risk1.com/x" }], category: "other", stance: "neutral" }] };
+      return { output: output as T, model: "mock" };
+    },
+  };
+
+  it("repeats the first four searches on research, official and industry sites only", async () => {
+    const calls: { query: string; domains?: readonly string[] }[] = [];
+    const search: SearchProvider = {
+      mode: "mock",
+      search: async (query, _max, options) => {
+        calls.push({ query, domains: options?.domains });
+        return options?.domains ? [hit("https://www.worldbank.org/report", 0.4)] : [hit(`https://blog-${query.replace(/\s/g, "")}.com/x`, 0.9)];
+      },
+    };
+    const { research } = await collectResearch("Question?", reasoning, search);
+    const focused = calls.filter((c) => c.domains);
+    expect(calls).toHaveLength(10);
+    expect(focused.map((c) => c.query)).toEqual(["risk 1", "demand 1", "risk 2", "demand 2"]);
+    expect(focused[0].domains).toContain("worldbank.org");
+    expect(focused[0].domains).toContain("statista.com");
+    expect(focused[0].domains).not.toContain("coindesk.com");
+    expect(research.sources.map((s) => s.url)).toContain("https://www.worldbank.org/report");
+  });
+
+  it("picks research and official sources before news, and news before blogs, within each search", async () => {
+    const results = [hit("https://someblog.com/a", 0.95), hit("https://www.reuters.com/a", 0.6), hit("https://www.imf.org/a", 0.3)];
+    const search: SearchProvider = { mode: "mock", search: async (_q, _max, options) => (options?.domains ? [] : results) };
+    const oneQuery: ReasoningProvider = {
+      mode: "mock",
+      async reason<T>(req: ReasonRequest) {
+        const claim = { text: "A claim.", quotes: [{ source_id: "S1", text: "Content for https://www.imf.org/a" }], category: "other", stance: "neutral" };
+        return { output: (req.step === "query_plan" ? { queries: ["q"] } : { claims: [claim] }) as T, model: "mock" };
+      },
+    };
+    const { research } = await collectResearch("Question?", oneQuery, search);
+    expect(research.sources.map((s) => s.kind)).toEqual(["government", "news", "company_or_blog"]);
   });
 });
 

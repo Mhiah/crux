@@ -3,7 +3,7 @@ import { CLAIMS_SCHEMA, QUERY_PLAN_SCHEMA } from "../reasoning/schemas";
 import { QUERY_PLAN_SYSTEM, CLAIMS_SYSTEM, formatSources } from "../reasoning/prompts";
 import type { Claim, Research, Source } from "../types";
 import type { SearchProvider } from "./search";
-import { classifySource, knownKind, sourceFlags, SERV_SOURCE_KINDS, type SourceKind } from "./sources";
+import { classifySource, knownKind, PRIMARY_DOMAINS, sourceFlags, sourceRank, SERV_SOURCE_KINDS, type SourceKind } from "./sources";
 import { quoteFound, unmatchedNumbers } from "./verify";
 
 const RESULTS_PER_QUERY = 5;
@@ -11,6 +11,9 @@ const MAX_SOURCES = 20;
 // Tavily's advanced depth returns ~3 relevant chunks per result (typically 1.2k-2.4k chars);
 // cutting shorter drops the figures that live past the page intro.
 const MAX_EXCERPT_CHARS = 2500;
+// The first searches (both sides, since the plan alternates) run a second time limited to
+// research, official and industry-report sites, so original data isn't outranked by blogs.
+const PRIMARY_PASS_QUERIES = 4;
 
 export type CollectResult = { research: Research; models: string[]; warnings: string[] };
 
@@ -48,13 +51,15 @@ function interleave(plan: QueryPlan): string[] {
 /**
  * Picks sources query by query in turn (each query's best result, then each one's second
  * best, ...), so no query's results, least of all the challenging ones, get crowded out by
- * another's higher relevance scores. Weak sources only fill slots the rest leave open.
+ * another's higher relevance scores. Within a query, research, official and industry sources
+ * come first, then news, then company sites and blogs. Weak sources only fill slots the rest
+ * leave open.
  */
 function pickSources(perQuery: Omit<Source, "id">[][], max: number): Omit<Source, "id">[] {
   const picked: Omit<Source, "id">[] = [];
   const seen = new Set<string>();
   for (const weak of [false, true]) {
-    const lists = perQuery.map((list) => list.filter((s) => s.flags.length > 0 === weak).sort((a, b) => b.relevance - a.relevance));
+    const lists = perQuery.map((list) => list.filter((s) => s.flags.length > 0 === weak).sort((a, b) => sourceRank(a.kind) - sourceRank(b.kind) || b.relevance - a.relevance));
     for (let round = 0; picked.length < max && lists.some((l) => l.length > round); round++) {
       for (const list of lists) {
         const s = list[round];
@@ -95,10 +100,15 @@ export async function collectResearch(
   const queries = interleave(plan.output);
   if (!plan.output.challenging_queries?.length) warnings.push("The search plan had no queries aimed at evidence against the answer.");
 
-  const settled = await Promise.allSettled(queries.map((q) => search.search(q, RESULTS_PER_QUERY)));
+  const searches = [
+    ...queries.map((q) => ({ query: q, domains: undefined })),
+    ...queries.slice(0, PRIMARY_PASS_QUERIES).map((q) => ({ query: q, domains: PRIMARY_DOMAINS })),
+  ];
+  const settled = await Promise.allSettled(searches.map((s) => search.search(s.query, RESULTS_PER_QUERY, { domains: s.domains })));
   const perQuery: Omit<Source, "id">[][] = settled.map((r, i) => {
     if (r.status === "rejected") {
-      warnings.push(`Search failed for "${queries[i]}": ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
+      const where = searches[i].domains ? " (research and official sites)" : "";
+      warnings.push(`Search failed for "${searches[i].query}"${where}: ${r.reason instanceof Error ? r.reason.message : String(r.reason)}`);
       return [];
     }
     // Only web links: a result's URL becomes a clickable link in the report.

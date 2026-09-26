@@ -72,6 +72,19 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
   reference: ["wikipedia.org", "britannica.com", "investopedia.com", "corporatefinanceinstitute.com", "nerdwallet.com", "coinmarketcap.com", "coingecko.com"],
 };
 
+/** Publishers of original data: studies, official statistics and industry research. */
+export const PRIMARY_DOMAINS: readonly string[] = [...DOMAINS.research!, ...DOMAINS.government!, ...DOMAINS.industry_report!];
+
+/**
+ * How much a source's type is worth as evidence, best first. Unrecognised sites count as
+ * company or blog here, since SERV only labels them after they're picked.
+ */
+export function sourceRank(kind: SourceKind): number {
+  if (kind === "research" || kind === "government" || kind === "industry_report") return 0;
+  if (kind === "news" || kind === "reference") return 1;
+  return 2;
+}
+
 function hostOf(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase().replace(/^www\./, "");

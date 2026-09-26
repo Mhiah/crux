@@ -6,9 +6,12 @@ export type SearchResult = {
   published_date: string | null;
 };
 
+/** `domains` limits a search to those sites (and their subdomains). */
+export type SearchOptions = { domains?: readonly string[] };
+
 export interface SearchProvider {
   readonly mode: "live" | "mock";
-  search(query: string, maxResults: number): Promise<SearchResult[]>;
+  search(query: string, maxResults: number, options?: SearchOptions): Promise<SearchResult[]>;
 }
 
 type TavilyResponse = {
@@ -21,11 +24,17 @@ export class TavilySearch implements SearchProvider {
 
   constructor(private apiKey: string) {}
 
-  async search(query: string, maxResults: number): Promise<SearchResult[]> {
+  async search(query: string, maxResults: number, { domains }: SearchOptions = {}): Promise<SearchResult[]> {
     const res = await fetch("https://api.tavily.com/search", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${this.apiKey}` },
-      body: JSON.stringify({ query, max_results: maxResults, search_depth: "advanced", topic: "general" }),
+      body: JSON.stringify({
+        query,
+        max_results: maxResults,
+        search_depth: "advanced",
+        topic: "general",
+        ...(domains?.length ? { include_domains: domains } : {}),
+      }),
     });
     if (!res.ok) throw new Error(`Tavily search failed (${res.status}): ${await res.text()}`);
     const data = (await res.json()) as TavilyResponse;
