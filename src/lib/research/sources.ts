@@ -25,22 +25,31 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
   social: [
     "facebook.com", "fb.com", "instagram.com", "x.com", "twitter.com", "linkedin.com", "tiktok.com", "youtube.com",
     "reddit.com", "quora.com", "pinterest.com", "threads.net", "nairaland.com", "t.me", "whatsapp.com",
+    "medium.com", "substack.com", "discord.com", "telegram.org", "bitcointalk.org", "stackexchange.com",
   ],
   research: [
     "researchgate.net", "academia.edu", "semanticscholar.org", "ssrn.com", "arxiv.org", "doi.org", "sciencedirect.com",
     "springer.com", "link.springer.com", "wiley.com", "tandfonline.com", "mdpi.com", "jstor.org", "ncbi.nlm.nih.gov",
     "nber.org", "scholar.google.com", "emerald.com", "sagepub.com", "frontiersin.org", "plos.org", "nature.com",
-    "rsisinternational.org", "abjournals.org", "ajol.info", "iiste.org",
+    "rsisinternational.org", "abjournals.org", "ajol.info", "iiste.org", "hbs.edu", "brookings.edu", "cambridge.org",
+    "oup.com", "papers.ssrn.com", "repec.org", "ideas.repec.org", "cepr.org", "voxeu.org",
   ],
   government: [
     "worldbank.org", "imf.org", "oecd.org", "un.org", "undp.org", "who.int", "afdb.org", "wto.org", "ilo.org", "bis.org",
-    "europa.eu", "cbn.gov.ng", "nigerianstat.gov.ng",
+    "europa.eu", "cbn.gov.ng", "nigerianstat.gov.ng", "fca.org.uk", "bankofengland.co.uk", "federalreserve.gov",
+    "ecb.europa.eu", "esma.europa.eu", "fsb.org", "iosco.org", "fatf-gafi.org", "sec.gov.ng", "cbk.go.ke", "resbank.co.za",
+    "bog.gov.gh", "centralbank.ie", "mas.gov.sg", "fincen.gov",
   ],
   industry_report: [
     "mordorintelligence.com", "6wresearch.com", "statista.com", "grandviewresearch.com", "marketsandmarkets.com",
     "imarcgroup.com", "fortunebusinessinsights.com", "researchandmarkets.com", "alliedmarketresearch.com", "gartner.com",
     "forrester.com", "idc.com", "mckinsey.com", "bcg.com", "pwc.com", "deloitte.com", "kpmg.com", "ey.com",
     "accenture.com", "bain.com", "tracxn.com", "crunchbase.com", "cbinsights.com", "agustoresearch.com", "gsma.com",
+    // Crypto, payments and fintech research
+    "chainalysis.com", "messari.io", "kaiko.com", "glassnode.com", "coinmetrics.io", "dune.com", "defillama.com",
+    "galaxy.com", "a16zcrypto.com", "electriccapital.com", "juniperresearch.com", "mckinsey.de", "worldpay.com",
+    "fisglobal.com", "capgemini.com", "emarketer.com", "insiderintelligence.com", "pewresearch.org", "morningconsult.com",
+    "yougov.com", "ipsos.com", "nielsen.com", "similarweb.com",
   ],
   news: [
     "reuters.com", "bloomberg.com", "ft.com", "wsj.com", "nytimes.com", "bbc.com", "bbc.co.uk", "theguardian.com",
@@ -48,8 +57,17 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
     "wired.com", "businessinsider.com", "techcabal.com", "techpoint.africa", "punchng.com", "guardian.ng",
     "vanguardngr.com", "premiumtimesng.com", "thecable.ng", "businessday.ng", "nairametrics.com", "channelstv.com",
     "thisdaylive.com", "dailytrust.com", "leadership.ng", "tribuneonlineng.com", "africanews.com", "qz.com",
+    "axios.com", "fortune.com", "cnn.com", "npr.org", "washingtonpost.com", "usatoday.com", "time.com", "theatlantic.com",
+    "hbr.org", "fastcompany.com", "inc.com", "entrepreneur.com", "venturebeat.com", "zdnet.com", "arstechnica.com",
+    "restofworld.org", "semafor.com", "marketwatch.com", "barrons.com", "investing.com", "yahoo.com", "finance.yahoo.com",
+    // Crypto, payments and fintech news
+    "coindesk.com", "cointelegraph.com", "theblock.co", "decrypt.co", "blockworks.co", "bitcoinmagazine.com",
+    "cryptoslate.com", "cryptonews.com", "dlnews.com", "thedefiant.io", "coinjournal.net", "beincrypto.com",
+    "pymnts.com", "finextra.com", "americanbanker.com", "paymentsdive.com", "paymentscardsandmobile.com", "thefintechtimes.com",
+    "fintechfutures.com", "tearsheet.co", "techcentral.co.za", "disrupt-africa.com", "weetracker.com", "iol.co.za",
+    "nation.africa", "businessdailyafrica.com", "myjoyonline.com", "citinewsroom.com",
   ],
-  reference: ["wikipedia.org", "britannica.com", "investopedia.com"],
+  reference: ["wikipedia.org", "britannica.com", "investopedia.com", "corporatefinanceinstitute.com", "nerdwallet.com"],
 };
 
 function hostOf(url: string): string | null {
@@ -62,9 +80,10 @@ function hostOf(url: string): string | null {
 
 const matches = (host: string, domain: string) => host === domain || host.endsWith(`.${domain}`);
 
-export function classifySource(url: string): SourceKind {
+/** The source's type when its address is recognised, or null when it isn't (then SERV's label decides). */
+export function knownKind(url: string): SourceKind | null {
   const host = hostOf(url);
-  if (!host) return "company_or_blog";
+  if (!host) return null;
   if (host === "example.org" || host.endsWith(".example.org")) return "mock";
   for (const kind of ["social", "research", "government", "industry_report", "news", "reference"] as const) {
     if (DOMAINS[kind]!.some((d) => matches(host, d))) return kind;
@@ -73,8 +92,15 @@ export function classifySource(url: string): SourceKind {
   if (/(^|\.)(gov|gouv|gob|mil)(\.[a-z]{2})?$/.test(host) || host.endsWith(".int")) return "government";
   if (/(^|\.)(edu|ac)(\.[a-z]{2})?$/.test(host) || /^(ir|repository|eprints|scholar|journals?)\./.test(host)) return "research";
   if (/(^|\.)(news|times|herald|tribune|gazette|post|guardian)\b/.test(host)) return "news";
-  return "company_or_blog";
+  return null;
 }
+
+export function classifySource(url: string): SourceKind {
+  return knownKind(url) ?? "company_or_blog";
+}
+
+/** Kinds SERV may assign to a source it reads (never "mock": that's only for fixtures). */
+export const SERV_SOURCE_KINDS = ["research", "government", "industry_report", "news", "reference", "company_or_blog", "social"] as const;
 
 /** Why a source is weak evidence, if it is: user-generated content, or out of date. */
 export function sourceFlags(kind: SourceKind, publishedDate: string | null, now = new Date()): string[] {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatClaims } from "../src/lib/reasoning/prompts";
+import { formatClaims, formatEvidence } from "../src/lib/reasoning/prompts";
 import { collectResearch } from "../src/lib/research/collect";
 import type { SearchProvider, SearchResult } from "../src/lib/research/search";
 import { classifySource, sourceFlags } from "../src/lib/research/sources";
@@ -81,5 +81,70 @@ describe("source selection", () => {
     expect(formatClaims([claim], small.sources)).toContain("S3 social / forum");
     expect(formatClaims([claim], small.sources)).toContain("[weak evidence: rests only on social posts or out-of-date sources]");
     expect(formatClaims([small.claims[0]], small.sources)).not.toContain("weak evidence");
+  });
+});
+
+describe("balanced research", () => {
+  const reasoningWith = (plan: unknown, claims: unknown, sources?: unknown): ReasoningProvider => ({
+    mode: "mock",
+    async reason<T>(req: ReasonRequest) {
+      return { output: (req.step === "query_plan" ? plan : { claims, ...(sources ? { sources } : {}) }) as T, model: "mock" };
+    },
+  });
+  const claim = (text: string, sourceId: string, quote: string, stance = "supports") => ({
+    text,
+    quotes: [{ source_id: sourceId, text: quote }],
+    category: "other",
+    stance,
+  });
+
+  it("recognises crypto and payments publishers", () => {
+    expect(classifySource("https://www.coindesk.com/business/2025/01/01/x")).toBe("news");
+    expect(classifySource("https://cointelegraph.com/news/x")).toBe("news");
+    expect(classifySource("https://www.chainalysis.com/blog/2025-geography-of-crypto")).toBe("industry_report");
+    expect(classifySource("https://www.fca.org.uk/news/x")).toBe("government");
+  });
+
+  it("gives the challenging queries their share of sources despite lower relevance", async () => {
+    const pro = Array.from({ length: 20 }, (_, i) => hit(`https://pro${i}.com/page`, 0.95));
+    const con = Array.from({ length: 3 }, (_, i) => hit(`https://con${i}.com/page`, 0.3));
+    const search: SearchProvider = { mode: "mock", search: async (q) => (q.startsWith("why") ? con : pro) };
+    const plan = { supporting_queries: ["demand for it"], challenging_queries: ["why it fails"] };
+    const { research } = await collectResearch("Question?", reasoningWith(plan, [claim("A claim.", "S1", "Content for https://con0.com/page")]), search);
+    expect(research.queries).toEqual(["why it fails", "demand for it"]);
+    expect(research.sources).toHaveLength(20);
+    expect(research.sources.filter((s) => s.url.startsWith("https://con"))).toHaveLength(3);
+  });
+
+  it("uses SERV's publisher label only for sites the address list doesn't know", async () => {
+    const results = [hit("https://someobscurecryptonews.io/story", 0.9), hit("https://www.coindesk.com/story", 0.8), hit("https://unknown-vendor.com/x", 0.7)];
+    const search: SearchProvider = { mode: "mock", search: async () => results };
+    const labels = [
+      { source_id: "S1", kind: "news" },
+      { source_id: "S2", kind: "company_or_blog" }, // wrong, but CoinDesk is known: ignored
+      { source_id: "S3", kind: "not-a-kind" }, // invalid: ignored
+    ];
+    const { research } = await collectResearch(
+      "Question?",
+      reasoningWith({ queries: ["q"] }, [claim("A claim.", "S1", "Content for https://someobscurecryptonews.io/story")], labels),
+      search,
+    );
+    expect(research.sources.map((s) => s.kind)).toEqual(["news", "news", "company_or_blog"]);
+  });
+
+  it("warns, and tells the later stages, when no counter-evidence was found", async () => {
+    const search: SearchProvider = { mode: "mock", search: async () => [hit("https://a.com/x", 0.9)] };
+    const oneSided = await collectResearch("Question?", reasoningWith({ queries: ["q"] }, [claim("Yes.", "S1", "Content for https://a.com/x")]), search);
+    expect(oneSided.warnings.some((w) => w.includes("No evidence against"))).toBe(true);
+    expect(oneSided.warnings.some((w) => w.includes("no queries aimed at evidence against"))).toBe(true);
+    expect(formatEvidence("Question?", oneSided.research)).toContain("Treat that as a gap in the evidence");
+
+    const balanced = await collectResearch(
+      "Question?",
+      reasoningWith({ supporting_queries: ["a"], challenging_queries: ["b"] }, [claim("No.", "S1", "Content for https://a.com/x", "challenges")]),
+      search,
+    );
+    expect(balanced.warnings).toEqual([]);
+    expect(formatEvidence("Question?", balanced.research)).not.toContain("gap in the evidence");
   });
 });

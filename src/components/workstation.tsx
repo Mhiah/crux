@@ -524,6 +524,12 @@ function EvidenceView({ project, focus, clearFocus }: { project: ResearchProject
       <section>
         <Heading aside={`${r.claims.length} facts from ${r.sources.length} sources`}>Evidence</Heading>
         {r.fact_check && <FactCheckSummary check={r.fact_check} />}
+        {!r.claims.some((c) => c.stance === "challenges") && (
+          <p className="mb-3 rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn">
+            No evidence against a &ldquo;yes&rdquo; answer was found in the sources. That is a gap in the research, not proof: the stress test had
+            only reasoning to work with.
+          </p>
+        )}
         <SourceMix sources={r.sources} />
       </section>
 
