@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { HomeButton } from "@/components/home-button";
 import { SiteHeader } from "@/components/site-header";
 import { Progress, STAGES, Workstation } from "@/components/workstation";
 import type { PipelineEvent, ResearchProject, Stage } from "@/lib/types";
@@ -143,7 +144,7 @@ export default function Home() {
   return (
     <>
       {header}
-      <main className="mx-auto w-full max-w-4xl px-5 pt-8 pb-16 sm:pt-12">
+      <main className="mx-auto w-full max-w-4xl px-5 pt-8 pb-28 sm:pt-12">
         <h1 className="text-2xl font-semibold leading-snug tracking-tight print:hidden">{question}</h1>
 
         {mode === "mock" && (
@@ -174,6 +175,7 @@ export default function Home() {
           </div>
         )}
       </main>
+      {!running && <HomeButton onHome={newQuestion} />}
     </>
   );
 }
