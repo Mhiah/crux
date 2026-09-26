@@ -201,26 +201,42 @@ const slug = (s: string) =>
 /** Nothing is stored for anyone: the report leaves the page as a PDF or a JSON file. */
 function Downloads({ project }: { project: ResearchProject }) {
   const filename = `crux-${slug(project.question)}-${project.created_at.slice(0, 10)}`;
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
-  function downloadPdf() {
-    // Browsers name the saved PDF after the page title.
-    const title = document.title;
-    document.title = filename;
-    window.addEventListener("afterprint", () => (document.title = title), { once: true });
-    window.print();
+  function save(blob: Blob, name: string) {
+    const url = URL.createObjectURL(blob);
+    Object.assign(document.createElement("a"), { href: url, download: name }).click();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000); // some mobile browsers read it after the click
   }
 
-  function downloadJson() {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }));
-    const a = Object.assign(document.createElement("a"), { href: url, download: `${filename}.json` });
-    a.click();
-    URL.revokeObjectURL(url);
+  async function downloadPdf() {
+    setBusy(true);
+    setFailed(false);
+    try {
+      // react-pdf is only fetched when someone actually downloads.
+      const { reportPdfBlob } = await import("./report-pdf");
+      save(await reportPdfBlob(project), `${filename}.pdf`);
+    } catch (err) {
+      console.error(err);
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
   }
+
+  const downloadJson = () => save(new Blob([JSON.stringify(project, null, 2)], { type: "application/json" }), `${filename}.json`);
 
   return (
     <div className="ml-auto flex items-center gap-1">
-      <button type="button" onClick={downloadPdf} className="rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground">
-        PDF
+      {failed && <span className="text-xs text-bad">PDF failed, try again</span>}
+      <button
+        type="button"
+        onClick={downloadPdf}
+        disabled={busy}
+        className="rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground disabled:opacity-60"
+      >
+        {busy ? "Preparing…" : "PDF"}
       </button>
       <button type="button" onClick={downloadJson} className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted hover:bg-surface hover:text-foreground sm:block">
         JSON
