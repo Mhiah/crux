@@ -34,7 +34,7 @@ Without API keys, everything runs on **mock fixtures** built around the plan's e
 
 ## How it works
 
-- **SERV Reasoning** (`src/lib/reasoning/serv.ts`) is OpenAI-compatible. Every reasoning step is a chat completion with a strict JSON schema and SERV's server-side `serv_prompt_guard` (the stages read untrusted web excerpts). `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check on each stage.
+- **SERV Reasoning** (`src/lib/reasoning/serv.ts`) is OpenAI-compatible. Every reasoning step is a chat completion with a strict JSON schema and SERV's server-side `serv_prompt_guard` (the stages read untrusted web excerpts). `SERV_SHADOW_AGENT=1` adds SERV's shadow-agent check on each stage. The guard intermittently blocks harmless requests, so a block (a refusal that used no tokens) is retried up to twice; a refusal from the model itself is not.
 - **Research** (`src/lib/research/collect.ts`): SERV plans the search queries, including ones aimed at evidence *against* the obvious answer. Tavily runs them, results are deduped into sources `S1…`, and SERV extracts claims `C1…`, each tied to its sources.
 - **Stages** (`src/lib/reasoning/stages.ts`): each stage cites records by ID: assumptions `A1…`, challenges `X1…`. The pipeline checks every citation, strips IDs that don't exist and logs a warning, so an audit-trail link can never dangle. Re-evaluation must judge every assumption; any it skips are marked `unresolved`.
 - **What Changed?** is *assembled* from the recorded stages, not generated, so each line is what the reasoning actually said, linked to its claims and challenges.

@@ -40,18 +40,30 @@ function servTools(step: string): OpenAI.Chat.Completions.ChatCompletionTool[] {
   return tools;
 }
 
+/**
+ * SERV's prompt guard intermittently blocks harmless requests: identical inputs were blocked
+ * 3 in 4 times, then 0 in 10 minutes later. A block never reaches the model, so it comes back
+ * as a refusal with zero tokens used; a genuine model refusal has token usage and isn't retried.
+ */
+const GUARD_RETRIES = 2;
+
+class GuardBlocked extends Error {}
+
+type ChatClient = Pick<OpenAI, "chat">;
+
 export class ServProvider implements ReasoningProvider {
   readonly mode = "live" as const;
-  private client: OpenAI;
+  private client: ChatClient;
 
-  constructor(apiKey: string, private model = SERV_MODEL) {
-    this.client = new OpenAI({ apiKey, baseURL: SERV_BASE_URL });
+  constructor(apiKey: string, private model = SERV_MODEL, client?: ChatClient) {
+    this.client = client ?? new OpenAI({ apiKey, baseURL: SERV_BASE_URL });
   }
 
   async reason<T>(req: ReasonRequest): Promise<ReasonResult<T>> {
     // One retry on malformed output: strict schemas make this rare, but a truncated response would sink the whole run.
-    let lastError: unknown;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    let jsonRetries = 1;
+    let guardRetries = GUARD_RETRIES;
+    for (;;) {
       try {
         const res = await this.client.chat.completions.create({
           model: this.model,
@@ -66,17 +78,23 @@ export class ServProvider implements ReasoningProvider {
           max_completion_tokens: MAX_OUTPUT_TOKENS,
         });
         const message = res.choices[0]?.message;
-        if (message?.refusal) throw new Error(`SERV refused the ${req.step} step: ${message.refusal}`);
+        if (message?.refusal) {
+          if (!res.usage?.total_tokens) {
+            throw new GuardBlocked(`SERV's prompt guard blocked the ${req.step} step ${GUARD_RETRIES + 1} times: ${message.refusal}`);
+          }
+          throw new Error(`SERV refused the ${req.step} step: ${message.refusal}`);
+        }
         const content = message?.content;
         if (!content) throw new Error(`SERV returned no content for the ${req.step} step.`);
         return { output: JSON.parse(content) as T, model: res.model || this.model };
       } catch (err) {
-        lastError = err;
-        if (!(err instanceof SyntaxError)) break;
+        if (err instanceof GuardBlocked && guardRetries-- > 0) continue;
+        if (err instanceof SyntaxError) {
+          if (jsonRetries-- > 0) continue;
+          throw new Error(`SERV returned invalid JSON for the ${req.step} step.`);
+        }
+        throw err;
       }
     }
-    throw lastError instanceof SyntaxError
-      ? new Error(`SERV returned invalid JSON for the ${req.step} step.`)
-      : lastError;
   }
 }
