@@ -5,7 +5,7 @@
 
 const CHEVRONS = Array.from({ length: 12 }, (_, i) => i * 30);
 
-export function CruxMark({ className = "", title }: { className?: string; title?: string }) {
+export function CruxMark({ className = "", title, weight = 6 }: { className?: string; title?: string; weight?: number }) {
   return (
     <svg viewBox="-50 -50 100 100" className={className} role={title ? "img" : undefined} aria-hidden={title ? undefined : true}>
       {title && <title>{title}</title>}
@@ -17,7 +17,7 @@ export function CruxMark({ className = "", title }: { className?: string; title?
           transform={`rotate(${deg - 90}) translate(38 0) rotate(90)`}
           fill="none"
           stroke="currentColor"
-          strokeWidth={6}
+          strokeWidth={weight}
           strokeLinecap="square"
           strokeLinejoin="miter"
         />
@@ -26,11 +26,11 @@ export function CruxMark({ className = "", title }: { className?: string; title?
   );
 }
 
-/** "Crux" with the mark standing in for the C. */
-export function Wordmark({ className = "" }: { className?: string }) {
+/** "Crux" with the mark standing in for the C. Pass the size and weight in `className`. */
+export function Wordmark({ className = "font-semibold", markWeight }: { className?: string; markWeight?: number }) {
   return (
-    <span className={`inline-flex items-baseline font-semibold tracking-tight ${className}`} aria-label="Crux">
-      <CruxMark className="mr-[0.05em] h-[0.9em] w-[0.9em] self-center" />
+    <span className={`inline-flex items-baseline tracking-tight ${className}`} aria-label="Crux">
+      <CruxMark weight={markWeight} className="mr-[0.05em] h-[0.9em] w-[0.9em] self-center" />
       <span aria-hidden>rux</span>
     </span>
   );
