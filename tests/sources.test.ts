@@ -148,3 +148,30 @@ describe("balanced research", () => {
     expect(formatEvidence("Question?", balanced.research)).not.toContain("gap in the evidence");
   });
 });
+
+describe("claim cleanup", () => {
+  it("strips quotation marks around a claim and merges a claim extracted twice", async () => {
+    const results = [hit("https://a.com/x", 0.9, "Thirty-three percent of non-accepting merchants said they would accept crypto."), hit("https://b.com/y", 0.8)];
+    const search: SearchProvider = { mode: "mock", search: async () => results };
+    const claim = (source_id: string, quote: string) => ({ text: '"33% of non-accepting merchants would accept crypto."', quotes: [{ source_id, text: quote }], category: "adoption", stance: "supports" });
+    const reasoning: ReasoningProvider = {
+      mode: "mock",
+      async reason<T>(req: ReasonRequest) {
+        const output = req.step === "query_plan" ? { queries: ["q"] } : { claims: [claim("S1", "Thirty-three percent of non-accepting merchants said"), claim("S2", "Content for https://b.com/y")] };
+        return { output: output as T, model: "mock" };
+      },
+    };
+    const { research } = await collectResearch("Question?", reasoning, search);
+    expect(research.claims).toHaveLength(1);
+    expect(research.claims[0].text).toBe("33% of non-accepting merchants would accept crypto.");
+    expect(research.claims[0].source_ids).toEqual(["S1", "S2"]);
+    expect(research.claims[0].unmatched_numbers).toEqual([]);
+  });
+
+  it("recognises the publishers seen mislabelled in a live run", () => {
+    expect(classifySource("https://www.fedsmallbusiness.org/reports/survey/2025")).toBe("government");
+    expect(classifySource("https://bankingjournal.aba.com/2025/x")).toBe("news");
+    expect(classifySource("https://www.credenceresearch.com/report/x")).toBe("industry_report");
+    expect(classifySource("https://coinmarketcap.com/academy/x")).toBe("reference");
+  });
+});

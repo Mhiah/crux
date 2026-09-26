@@ -126,7 +126,9 @@ export async function collectResearch(
 
   const claims: Claim[] = [];
   let dropped = 0;
-  for (const c of extracted.output.claims) {
+  for (const raw of extracted.output.claims) {
+    // Models sometimes wrap a claim in quotation marks; the claim is ours, the quotes hold the source's words.
+    const c = { ...raw, text: raw.text.trim().replace(/^["“”']+|["“”']+$/g, "").trim() };
     const label = `"${c.text.slice(0, 60)}…"`;
     const quotes: Claim["quotes"] = [];
     for (const q of c.quotes ?? []) {
@@ -138,6 +140,14 @@ export async function collectResearch(
     if (quotes.length === 0) {
       dropped++;
       warnings.push(`Dropped claim ${label}: no quote for it was found in any source.`);
+      continue;
+    }
+    // The same claim extracted twice becomes one claim with the quotes of both.
+    const same = claims.find((x) => x.text.toLowerCase() === c.text.toLowerCase());
+    if (same) {
+      for (const q of quotes) if (!same.quotes.some((v) => v.source_id === q.source_id && v.text === q.text)) same.quotes.push(q);
+      same.source_ids = [...new Set(same.quotes.map((q) => q.source_id))];
+      same.unmatched_numbers = unmatchedNumbers(same.text, same.quotes.map((q) => q.text));
       continue;
     }
     const id = `C${claims.length + 1}`;

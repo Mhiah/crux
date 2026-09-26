@@ -36,3 +36,16 @@ describe("figures", () => {
     expect(unmatchedNumbers("Two startups raised seed rounds", ["Two startups raised seed rounds"])).toEqual([]);
   });
 });
+
+describe("figures written as words", () => {
+  it("matches spelled-out numbers in the source to digits in the claim", () => {
+    // From a live run: the source spells it out, SERV writes the digits.
+    expect(unmatchedNumbers("33% of non-accepting merchants would accept crypto", ["Thirty-three percent of non-accepting merchants said"])).toEqual([]);
+    expect(unmatchedNumbers("Twelve of 20 firms", ["twelve of twenty firms"])).toEqual([]);
+    expect(unmatchedNumbers("40% said yes", ["Forty percent said yes"])).toEqual([]);
+    expect(unmatchedNumbers("43% said yes", ["Forty percent said yes"])).toEqual(["43"]);
+    expect([...numbersIn("seventy-five and ninety nine and zero", { spelled: true })]).toEqual(["75", "99", "0"]);
+    // Words in a claim are not figures: "one of the largest" needs no "1" in the quote.
+    expect(unmatchedNumbers("One of the largest markets", ["the largest market"])).toEqual([]);
+  });
+});

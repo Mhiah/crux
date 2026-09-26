@@ -38,7 +38,7 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
     "worldbank.org", "imf.org", "oecd.org", "un.org", "undp.org", "who.int", "afdb.org", "wto.org", "ilo.org", "bis.org",
     "europa.eu", "cbn.gov.ng", "nigerianstat.gov.ng", "fca.org.uk", "bankofengland.co.uk", "federalreserve.gov",
     "ecb.europa.eu", "esma.europa.eu", "fsb.org", "iosco.org", "fatf-gafi.org", "sec.gov.ng", "cbk.go.ke", "resbank.co.za",
-    "bog.gov.gh", "centralbank.ie", "mas.gov.sg", "fincen.gov",
+    "bog.gov.gh", "centralbank.ie", "mas.gov.sg", "fincen.gov", "fedsmallbusiness.org", "federalreserve.org", "sba.gov",
   ],
   industry_report: [
     "mordorintelligence.com", "6wresearch.com", "statista.com", "grandviewresearch.com", "marketsandmarkets.com",
@@ -49,7 +49,8 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
     "chainalysis.com", "messari.io", "kaiko.com", "glassnode.com", "coinmetrics.io", "dune.com", "defillama.com",
     "galaxy.com", "a16zcrypto.com", "electriccapital.com", "juniperresearch.com", "mckinsey.de", "worldpay.com",
     "fisglobal.com", "capgemini.com", "emarketer.com", "insiderintelligence.com", "pewresearch.org", "morningconsult.com",
-    "yougov.com", "ipsos.com", "nielsen.com", "similarweb.com",
+    "yougov.com", "ipsos.com", "nielsen.com", "similarweb.com", "credenceresearch.com", "uschamber.com", "nfib.com",
+    "businessresearchinsights.com", "verifiedmarketresearch.com", "precedenceresearch.com", "coherentmarketinsights.com",
   ],
   news: [
     "reuters.com", "bloomberg.com", "ft.com", "wsj.com", "nytimes.com", "bbc.com", "bbc.co.uk", "theguardian.com",
@@ -65,9 +66,10 @@ const DOMAINS: Partial<Record<SourceKind, string[]>> = {
     "cryptoslate.com", "cryptonews.com", "dlnews.com", "thedefiant.io", "coinjournal.net", "beincrypto.com",
     "pymnts.com", "finextra.com", "americanbanker.com", "paymentsdive.com", "paymentscardsandmobile.com", "thefintechtimes.com",
     "fintechfutures.com", "tearsheet.co", "techcentral.co.za", "disrupt-africa.com", "weetracker.com", "iol.co.za",
-    "nation.africa", "businessdailyafrica.com", "myjoyonline.com", "citinewsroom.com",
+    "nation.africa", "businessdailyafrica.com", "myjoyonline.com", "citinewsroom.com", "aba.com", "tradingview.com",
+    "paymentsjournal.com", "digitaltransactions.net", "bankrate.com",
   ],
-  reference: ["wikipedia.org", "britannica.com", "investopedia.com", "corporatefinanceinstitute.com", "nerdwallet.com"],
+  reference: ["wikipedia.org", "britannica.com", "investopedia.com", "corporatefinanceinstitute.com", "nerdwallet.com", "coinmarketcap.com", "coingecko.com"],
 };
 
 function hostOf(url: string): string | null {
