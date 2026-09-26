@@ -9,8 +9,8 @@ import { TavilySearch, type SearchProvider } from "./research/search";
  */
 export function getProviders(): { reasoning: ReasoningProvider; search: SearchProvider } {
   const forceMock = process.env.CRUX_MOCK === "1";
-  const servKey = process.env.SERV_API_KEY;
-  const tavilyKey = process.env.TAVILY_API_KEY;
+  const servKey = process.env.SERV_API_KEY?.trim();
+  const tavilyKey = process.env.TAVILY_API_KEY?.trim();
   return {
     reasoning: !forceMock && servKey ? new ServProvider(servKey) : new MockReasoning(),
     search: !forceMock && tavilyKey ? new TavilySearch(tavilyKey) : new MockSearch(),
