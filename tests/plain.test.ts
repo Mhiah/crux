@@ -20,6 +20,19 @@ describe("stripRefs", () => {
   });
 });
 
+describe("stripDashes (via stripRefs)", () => {
+  it.each([
+    ["Yes—there is enough evidence to support launching.", "Yes, there is enough evidence to support launching."],
+    ["The market — especially micro firms — is price-sensitive.", "The market, especially micro firms, is price-sensitive."],
+    ["Interview 15–20 owners across 3–4 sectors.", "Interview 15-20 owners across 3-4 sectors."],
+    ["The UK–Nigeria corridor is large – but crowded.", "The UK-Nigeria corridor is large, but crowded."],
+    ["It survived — .", "It survived."],
+    ["Well-known, low-cost tools stay hyphenated.", "Well-known, low-cost tools stay hyphenated."],
+  ])("%s", (input, expected) => {
+    expect(stripRefs(input)).toBe(expected);
+  });
+});
+
 describe("refsIn", () => {
   it("finds each cited ID once, in order", () => {
     expect(refsIn("evidenced (C1, C2), so X4 weakens A2; see C1")).toEqual(["C1", "C2", "X4", "A2"]);
