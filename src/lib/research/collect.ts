@@ -6,7 +6,9 @@ import type { SearchProvider } from "./search";
 
 const RESULTS_PER_QUERY = 5;
 const MAX_SOURCES = 20;
-const MAX_EXCERPT_CHARS = 900;
+// Tavily's advanced depth returns ~3 relevant chunks per result (typically 1.2k-2.4k chars);
+// cutting shorter drops the figures that live past the page intro.
+const MAX_EXCERPT_CHARS = 2500;
 
 export type CollectResult = { research: Research; models: string[]; warnings: string[] };
 
