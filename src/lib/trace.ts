@@ -133,7 +133,7 @@ export function trace(p: ResearchProject, id: string): TraceNode | null {
     meta: [x.kind.replace(/_/g, " "), x.severity],
     restsOn: nonEmpty([
       { label: "Grounded in claims", ids: x.claim_ids },
-      { label: "Attacks assumptions", ids: x.target_assumption_ids },
+      { label: "Challenges assumptions", ids: x.target_assumption_ids },
     ]),
     usedBy: citations(p, id).filter((u) => !u.label.startsWith(`Challenge ${id}`)),
   };
