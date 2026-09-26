@@ -20,11 +20,11 @@ Every number below is from a real run of the demo question on 26 September 2026,
 
    | Stage | What happens | Time |
    | --- | --- | --- |
-   | Research | SERV plans 8 searches (half of them hunting for evidence against), Tavily runs them, 20 sources are picked, SERV extracts facts and Crux checks every quote | 21.7 s |
-   | Thesis | SERV commits to a first answer and names the assumptions it rests on | 7.3 s |
-   | Stress test | SERV challenges the thesis: weak assumptions, contradicting evidence, other explanations, risks, missing evidence | 13.1 s |
-   | Re-evaluate | Every assumption is re-judged against the evidence and the challenges | 9.7 s |
-   | Conclusion | The best-supported answer, its confidence, what's uncertain and what to check next | 8.8 s |
+   | Research | SERV plans 8 searches (half of them hunting for evidence against), Tavily runs them, 20 sources are picked, SERV extracts facts and Crux checks every quote | 30.5 s |
+   | Thesis | SERV commits to a first answer and names the assumptions it rests on | 7.7 s |
+   | Stress test | SERV challenges the thesis: weak assumptions, contradicting evidence, other explanations, risks, missing evidence | 10.6 s |
+   | Re-evaluate | Every assumption is re-judged against the evidence and the challenges | 11.0 s |
+   | Conclusion | The best-supported answer, its confidence, what's uncertain and what to check next | 7.2 s |
    | What changed | Assembled from the recorded stages, no model call | 0 s |
 
    About a minute in total, 6 SERV calls and 8 Tavily searches.
@@ -51,7 +51,7 @@ The first answer next to the answer after the stress test, and every material ch
 
 ![What changed: the first answer, the final answer, and why it moved](docs/screenshots/what-changed.png)
 
-In the demo run, the thesis was **weakened**: three changes, each backed by specific facts and challenges, turned "many small businesses are willing" into "some are, under conditions, and adoption stays limited".
+In the demo run, the thesis was **weakened**: three changes, each backed by specific facts and challenges, turned "many merchants are willing, with conditions" into "some are, but not broadly, and stated willingness is not proof of adoption".
 
 ### Stress test
 
@@ -61,13 +61,13 @@ SERV acts as a skeptical investor and challenges the first answer. Each challeng
 
 ### Assumptions, re-judged
 
-Every assumption the thesis depends on gets a verdict: supported, weakened, contradicted or unresolved, with the reasoning. If the re-evaluation skips one, Crux marks it unresolved rather than letting it pass silently. In the demo run: 3 weakened, 1 supported.
+Every assumption the thesis depends on gets a verdict: supported, weakened, contradicted or unresolved, with the reasoning. If the re-evaluation skips one, Crux marks it unresolved rather than letting it pass silently. In the demo run: 2 weakened, 2 supported.
 
 ![Assumptions with their verdicts](docs/screenshots/assumptions.png)
 
 ### Evidence, fact-checked
 
-Every fact shows the exact words it came from, with a link to the source. The summary at the top says how many extracted facts were dropped because their quote wasn't in the source, and sources are labelled by type. The demo run kept 29 facts (20 for, 9 against) from 20 sources and dropped 1.
+Every fact shows the exact words it came from, with a link to the source. The summary at the top says how many extracted facts were dropped because their quote wasn't in the source, and sources are labelled by type. The demo run kept all 30 facts it extracted (23 for, 6 against, 1 neutral) from 20 sources, and flagged 1 whose year wasn't in its quote.
 
 ![The Evidence view](docs/screenshots/evidence.png)
 
@@ -160,9 +160,9 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 ## What was checked
 
-- **Live runs with SERV and Tavily.** Three live runs of the crypto question on 26 September 2026. The second and third ran after the balanced-research change: evidence went from 24 for and 0 against to 22 for and 9 against, and source types from "20 company / blog" to a mix of research, government, industry, news and reference. Every quote passed except one, which was correctly dropped.
-- **The screenshots** are from the third run. After it, three fixes were made that it had exposed: spelled-out figures ("Thirty-three percent") now match digits, a fact extracted twice is merged, and more publishers are recognised. The report shown was reprocessed with those fixes from the same SERV output, which is why its answer still mentions one "unverified" figure: that was the false flag the first fix removed.
-- **Unit tests** (`npm test`, 57 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping, prompt-guard retries, and the full pipeline on sample data.
+- **Live runs with SERV and Tavily.** Four live runs of the crypto question on 26 September 2026. From the second run on, after the balanced-research change, evidence went from 24 for and 0 against to a real case against (9 against in the third run, 6 in the fourth), and source types from "20 company / blog" to a mix of research, industry, news and company sources.
+- **The screenshots** are from the fourth run, made after the last round of fixes and shown exactly as it came back. All 30 extracted facts passed the quote check; 1 is flagged because it says "in 2026" while its quote doesn't give a year.
+- **Unit tests** (`npm test`, 66 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline on sample data.
 - **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads from sample and live reports, the demo question by arrow key and by tap.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
 
