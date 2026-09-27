@@ -7,7 +7,8 @@ import type { Research, ResearchProject } from "./types";
  */
 
 const ID = "[SCAX]\\d{1,3}";
-const LIST = `${ID}(?:\\s*(?:,|;|and|&|/|or)\\s*${ID})*`;
+// IDs listed ("C1, C2 and C3") or as a range ("C1-C3", "C1 to C3"; en dashes are already hyphens here).
+const LIST = `${ID}(?:\\s*(?:,|;|and|&|/|or|-|to|through)\\s*${ID})*`;
 const NOUN: Record<string, string> = { C: "the evidence", S: "the sources", A: "an assumption", X: "the stress test" };
 
 export function refsIn(text: string): string[] {

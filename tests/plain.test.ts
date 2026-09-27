@@ -26,6 +26,10 @@ describe("stripRefs", () => {
     // Codes that aren't this run's records are ordinary words.
     ["The firm raised a Series A1 round and stores data on AWS S3.", "The firm raised a Series A1 round and stores data on AWS S3."],
     ["Pricing matters (C1, S3).", "Pricing matters (C1, S3)."],
+    // Ranges read as one citation, not "the evidence-the evidence".
+    ["These claims (C1-C3) still point the same way.", "These claims still point the same way."],
+    ["Claims C1–C4 still point the same way.", "These claims still point the same way."],
+    ["The pattern holds across C2 to C4.", "The pattern holds across the evidence."],
   ])("%s", (input, expected) => {
     expect(stripRefs(input)).toBe(expected);
   });
