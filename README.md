@@ -2,6 +2,8 @@
 
 **AI research that stress tests its own conclusions.**
 
+**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
+
 Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
 Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ) for every reasoning step and [Tavily](https://tavily.com) for web search.
@@ -10,7 +12,7 @@ Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ
 
 ## Try it in a few minutes
 
-Every number below is from a real run of the demo question on 26 September 2026, with live SERV and Tavily calls.
+Open **[crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**, or [run it locally](#run-it-locally). Every number below is from a real run of the demo question on 26 September 2026, with live SERV and Tavily calls.
 
 1. Run the app (see [Run it locally](#run-it-locally)) and open http://localhost:3000.
 2. The demo question, **"Are small businesses actually willing to accept crypto payments?"**, is shown faintly in the box. Press **→** (or Tab) to fill it in, or tap the box on a phone.
