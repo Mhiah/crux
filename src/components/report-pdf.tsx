@@ -124,7 +124,7 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
         <Text style={s.title}>{project.question}</Text>
         <Text style={s.meta}>
           {date(project.created_at)}
-          {project.mode === "mock" ? " · Mock run: illustrative sample data, not real research" : ""}
+          {project.mode === "mock" ? ` · ${project.notice ?? "Mock run: illustrative sample data, not real research"}` : ""}
         </Text>
 
         {c && (

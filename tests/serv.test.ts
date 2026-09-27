@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import OpenAI from "openai";
+import { OutOfCredits } from "../src/lib/credits";
+import { TavilySearch } from "../src/lib/research/search";
 import { ServProvider } from "../src/lib/reasoning/serv";
 import { QUERY_PLAN_SCHEMA } from "../src/lib/reasoning/schemas";
 
@@ -40,5 +43,33 @@ describe("ServProvider", () => {
     expect(client.calls).toBe(3);
     const second = serv(badJson, badJson, ok);
     await expect(second.provider.reason(REQ)).rejects.toThrow("SERV returned invalid JSON");
+  });
+});
+
+describe("out of credits", () => {
+  it("turns SERV's payment error into OutOfCredits", async () => {
+    const client = {
+      chat: {
+        completions: {
+          create: async () => {
+            throw OpenAI.APIError.generate(402, { error: { message: "Insufficient credits" } }, "402 Insufficient credits", new Headers());
+          },
+        },
+      },
+    };
+    const provider = new ServProvider("test", "gpt-5.4-mini", client as never);
+    await expect(provider.reason(REQ)).rejects.toBeInstanceOf(OutOfCredits);
+  });
+
+  it("turns Tavily's plan-limit answer into OutOfCredits, and keeps other failures as errors", async () => {
+    const realFetch = globalThis.fetch;
+    try {
+      globalThis.fetch = (async () => new Response("This request exceeds your plan's set usage limit.", { status: 432 })) as typeof fetch;
+      await expect(new TavilySearch("k").search("q", 5)).rejects.toBeInstanceOf(OutOfCredits);
+      globalThis.fetch = (async () => new Response("bad gateway", { status: 502 })) as typeof fetch;
+      await expect(new TavilySearch("k").search("q", 5)).rejects.not.toBeInstanceOf(OutOfCredits);
+    } finally {
+      globalThis.fetch = realFetch;
+    }
   });
 });

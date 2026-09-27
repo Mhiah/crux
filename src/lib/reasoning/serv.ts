@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { isCreditStatus, OutOfCredits } from "../credits";
 import type { ReasoningProvider, ReasonRequest, ReasonResult } from "./provider";
 
 /**
@@ -88,6 +89,7 @@ export class ServProvider implements ReasoningProvider {
         if (!content) throw new Error(`SERV returned no content for the ${req.step} step.`);
         return { output: JSON.parse(content) as T, model: res.model || this.model };
       } catch (err) {
+        if (err instanceof OpenAI.APIError && isCreditStatus(err.status, err.message)) throw new OutOfCredits("SERV", err.message);
         if (err instanceof GuardBlocked && guardRetries-- > 0) continue;
         if (err instanceof SyntaxError) {
           if (jsonRetries-- > 0) continue;

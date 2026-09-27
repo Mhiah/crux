@@ -1,3 +1,5 @@
+import { isCreditStatus, OutOfCredits } from "../credits";
+
 export type SearchResult = {
   url: string;
   title: string;
@@ -36,7 +38,12 @@ export class TavilySearch implements SearchProvider {
         ...(domains?.length ? { include_domains: domains } : {}),
       }),
     });
-    if (!res.ok) throw new Error(`Tavily search failed (${res.status}): ${await res.text()}`);
+    if (!res.ok) {
+      const text = await res.text();
+      // Tavily answers 432 when the plan's credits are used up and 433 at the pay-as-you-go limit.
+      if (res.status === 432 || res.status === 433 || isCreditStatus(res.status, text)) throw new OutOfCredits("Tavily", text);
+      throw new Error(`Tavily search failed (${res.status}): ${text}`);
+    }
     const data = (await res.json()) as TavilyResponse;
     return data.results.map((r) => ({
       url: r.url,

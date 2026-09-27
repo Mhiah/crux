@@ -181,6 +181,8 @@ export type ResearchProject = {
   what_changed: WhatChanged | null;
   audit: ReasoningAudit[];
   error: string | null;
+  /** Why a mock run is on sample data, when it fell back from a live run that ran out of credits. */
+  notice?: string;
 };
 
 /** Events streamed to the client as NDJSON while the pipeline runs. */
@@ -189,5 +191,7 @@ export type PipelineEvent =
   | { type: "stage_started"; stage: Stage }
   | { type: "stage_completed"; stage: Stage; audit: ReasoningAudit; project: ResearchProject }
   | { type: "error"; stage: Stage | null; message: string }
+  /** A live service ran out of credits; the run restarts on sample data. */
+  | { type: "fallback"; message: string }
   /** `saved`: the run can be reopened at /research/:id (false where there is no storage, e.g. Vercel). */
   | { type: "done"; project: ResearchProject; saved: boolean };

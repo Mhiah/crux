@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { OutOfCredits } from "./credits";
 import type { ReasoningProvider } from "./reasoning/provider";
 import { buildWhatChanged, conclude, formThesis, reevaluate, stressTest } from "./reasoning/stages";
 import { collectResearch } from "./research/collect";
@@ -10,6 +11,10 @@ export type PipelineDeps = {
   search: SearchProvider;
   onEvent?: (event: PipelineEvent) => void;
   save?: (project: ResearchProject) => Promise<void>;
+  /** Providers to rerun the question with when a live service runs out of credits (the sample data). */
+  fallback?: { reasoning: ReasoningProvider; search: SearchProvider };
+  /** Why this run is on sample data, when it fell back from a live run. */
+  notice?: string;
 };
 
 /**
@@ -33,6 +38,7 @@ export async function runResearch(question: string, deps: PipelineDeps): Promise
     what_changed: null,
     audit: [],
     error: null,
+    ...(deps.notice ? { notice: deps.notice } : {}),
   };
   onEvent({ type: "project", project: { id: project.id, question, created_at: project.created_at, mode: project.mode } });
 
@@ -112,6 +118,12 @@ export async function runResearch(question: string, deps: PipelineDeps): Promise
 
     project.status = "complete";
   } catch (err) {
+    if (err instanceof OutOfCredits && deps.fallback) {
+      const notice = `${err.service} credits have run out, so this is the sample report (mock mode), not research on your question.`;
+      console.error(err.message);
+      onEvent({ type: "fallback", message: notice });
+      return runResearch(question, { ...deps, ...deps.fallback, fallback: undefined, notice });
+    }
     project.status = "failed";
     project.error = err instanceof Error ? err.message : String(err);
     onEvent({ type: "error", stage: current, message: project.error });

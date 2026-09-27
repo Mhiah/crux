@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { MockReasoning, MockSearch } from "../src/lib/mock/providers";
 import { MOCK_CLAIMS } from "../src/lib/mock/fixtures";
+import { isCreditStatus, OutOfCredits } from "../src/lib/credits";
 import { runResearch } from "../src/lib/pipeline";
 import type { ReasoningProvider, ReasonRequest } from "../src/lib/reasoning/provider";
 import type { PipelineEvent } from "../src/lib/types";
@@ -172,5 +173,61 @@ describe("runResearch", () => {
     const unsaved: PipelineEvent[] = [];
     await runResearch(QUESTION, { reasoning: new MockReasoning(), search: new MockSearch(), onEvent: (e) => unsaved.push(e) });
     expect(unsaved.at(-1)).toMatchObject({ type: "done", saved: false });
+  });
+});
+
+describe("running out of credits", () => {
+  const liveReasoning = (fail: string) => {
+    const mock = new MockReasoning();
+    return {
+      mode: "live" as const,
+      async reason<T>(req: ReasonRequest) {
+        if (req.step === fail) throw new OutOfCredits("SERV", "402 Insufficient credits");
+        return mock.reason<T>(req);
+      },
+    };
+  };
+  const liveSearch = { mode: "live" as const, search: () => new MockSearch().search() };
+
+  it("reruns the question on sample data, says why, and drops the live attempt", async () => {
+    const events: PipelineEvent[] = [];
+    const project = await runResearch(QUESTION, {
+      reasoning: liveReasoning("stress_test"),
+      search: liveSearch,
+      onEvent: (e) => events.push(e),
+      fallback: { reasoning: new MockReasoning(), search: new MockSearch() },
+    });
+    expect(project.status).toBe("complete");
+    expect(project.mode).toBe("mock");
+    expect(project.notice).toMatch(/SERV credits have run out/);
+    const types = events.map((e) => e.type);
+    expect(types.filter((t) => t === "project")).toHaveLength(2);
+    expect(types).toContain("fallback");
+    expect(types).not.toContain("error");
+    expect(events.at(-1)).toMatchObject({ type: "done", project: { mode: "mock" } });
+  });
+
+  it("treats a Tavily credit error as out of credits, not as a failed search", async () => {
+    const search = { mode: "live" as const, search: async () => Promise.reject(new OutOfCredits("Tavily", "432 plan limit")) };
+    const project = await runResearch(QUESTION, {
+      reasoning: liveReasoning("none"),
+      search,
+      fallback: { reasoning: new MockReasoning(), search: new MockSearch() },
+    });
+    expect(project.mode).toBe("mock");
+    expect(project.notice).toMatch(/^Tavily credits have run out/);
+  });
+
+  it("fails as before when there's no fallback", async () => {
+    const project = await runResearch(QUESTION, { reasoning: liveReasoning("thesis"), search: liveSearch });
+    expect(project.status).toBe("failed");
+    expect(project.error).toMatch(/SERV credits have run out/);
+  });
+
+  it("recognises credit errors by status and wording", () => {
+    expect(isCreditStatus(402, "")).toBe(true);
+    expect(isCreditStatus(429, "Insufficient credits on your account")).toBe(true);
+    expect(isCreditStatus(429, "Rate limit reached, slow down")).toBe(false);
+    expect(isCreditStatus(401, "Invalid API key")).toBe(false);
   });
 });

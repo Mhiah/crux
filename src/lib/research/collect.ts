@@ -5,6 +5,7 @@ import type { Claim, Research, Source } from "../types";
 import type { SearchProvider } from "./search";
 import { classifySource, knownKind, PRIMARY_DOMAINS, sourceFlags, sourceRank, SERV_SOURCE_KINDS, type SourceKind } from "./sources";
 import { quoteFound, unmatchedNumbers } from "./verify";
+import { OutOfCredits } from "../credits";
 
 const RESULTS_PER_QUERY = 5;
 const MAX_SOURCES = 20;
@@ -105,6 +106,8 @@ export async function collectResearch(
     ...queries.slice(0, PRIMARY_PASS_QUERIES).map((q) => ({ query: q, domains: PRIMARY_DOMAINS })),
   ];
   const settled = await Promise.allSettled(searches.map((s) => search.search(s.query, RESULTS_PER_QUERY, { domains: s.domains })));
+  const noCredits = settled.find((r) => r.status === "rejected" && r.reason instanceof OutOfCredits);
+  if (noCredits) throw (noCredits as PromiseRejectedResult).reason;
   const perQuery: Omit<Source, "id">[][] = settled.map((r, i) => {
     if (r.status === "rejected") {
       const where = searches[i].domains ? " (research and official sites)" : "";

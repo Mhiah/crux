@@ -12,9 +12,9 @@ Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ
 
 ## Try it in a few minutes
 
-Open **[crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**, or [run it locally](#run-it-locally). Every number below is from a real run of the demo question on 26 September 2026, with live SERV and Tavily calls.
+Every number below is from a real run of the demo question on 26 September 2026, with live SERV and Tavily calls.
 
-1. Run the app (see [Run it locally](#run-it-locally)) and open http://localhost:3000.
+1. Open **[crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**.
 2. The demo question, **"Are small businesses actually willing to accept crypto payments?"**, is shown faintly in the box. Press **→** (or Tab) to fill it in, or tap the box on a phone.
 3. Choose **Find the crux**. The report fills in stage by stage as each one finishes:
 
@@ -163,7 +163,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 - **Live runs with SERV and Tavily.** Five live runs of the crypto question on 26 September 2026. The balanced-research change took the evidence from 24 for and 0 against to a real case against (6 to 9 facts against in each later run). The stronger-sources change took the source mix from 13 company or blog sites out of 20 to 1, with research, official statistics and industry reports making up 12.
 - **The screenshots** are from the fifth run, shown exactly as it came back. 3 of the 31 extracted facts were dropped because their quotes weren't in the source text (one rested on a Statista page whose figures sit behind a paywall), and 1 is flagged because it states a sample size its quote doesn't contain.
-- **Unit tests** (`npm test`, 69 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, and the full pipeline end to end.
+- **Unit tests** (`npm test`, 75 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, the switch to sample data when credits run out, and the full pipeline end to end.
 - **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
 
@@ -207,6 +207,8 @@ npm run build
 3. Redeploy (**Deployments → ⋯ → Redeploy**), because variables only apply to deployments made after they're added.
 
 A run takes about a minute, and the research API allows up to 300 seconds. On Vercel, runs aren't saved (functions can't keep files), so there is no "Saved report" link; use **Download** to keep a report.
+
+If SERV or Tavily credits run out, Crux doesn't fail: it shows the sample report instead, with a notice that the credits have run out and that the report isn't research on your question.
 
 ## Project layout
 

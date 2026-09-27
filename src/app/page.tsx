@@ -23,11 +23,17 @@ export default function Home() {
   const [mode, setMode] = useState<"live" | "mock" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   // Tapping the empty box fills the demo question once; after that a tap just edits.
   const tapFilled = useRef(false);
 
   function handle(event: PipelineEvent) {
-    if (event.type === "project") setMode(event.project.mode);
+    if (event.type === "project") {
+      // A fallback run starts over, so drop anything the live attempt had shown.
+      setMode(event.project.mode);
+      setProject(null);
+    }
+    if (event.type === "fallback") setNotice(event.message);
     if (event.type === "stage_started") setActive(event.stage);
     if (event.type === "stage_completed") setProject(event.project);
     if (event.type === "error") setError(`${STAGES.find((s) => s.key === event.stage)?.label ?? "The pipeline"} failed: ${event.message}`);
@@ -44,6 +50,7 @@ export default function Home() {
     setError(null);
     setMode(null);
     setSaved(false);
+    setNotice(null);
     try {
       const res = await fetch("/api/research", {
         method: "POST",
@@ -158,7 +165,7 @@ export default function Home() {
 
         {mode === "mock" && (
           <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn print:hidden">
-            Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made.
+            {notice ?? "Mock mode: illustrative fixtures, not real research. No SERV or Tavily calls are made."}
           </p>
         )}
 

@@ -1,4 +1,5 @@
 import { runResearch } from "@/lib/pipeline";
+import { MockReasoning, MockSearch } from "@/lib/mock/providers";
 import { getProviders } from "@/lib/providers";
 import { saveProject, storageAvailable } from "@/lib/store";
 
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
         await runResearch(question, {
           ...getProviders(),
           save: storageAvailable ? saveProject : undefined,
+          fallback: { reasoning: new MockReasoning(), search: new MockSearch() },
           onEvent: (event) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n")),
         });
       } finally {
