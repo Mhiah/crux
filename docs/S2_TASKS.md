@@ -22,6 +22,11 @@
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
 - [ ] **S2-10** Update README Season 2 positioning, preserve dashboard design, link **Independent review** directly after **What changed**, document real before/after screenshots. UI and documentation complete; later revision/result presentation remains pending.
+  - [x] Independent review link also shows on saved reports (`/research/[id]`), where the verdict is checked.
+  - [x] The link switches to the Answer view before scrolling, so it works from the Reasoning and Evidence tabs.
+  - [x] The review section and link are hidden where reviews are impossible (no storage), so production no longer shows "This report was not saved on the server".
+  - [x] README reworked: Season 2 positioning at the top, accurate status table, data/consent/cost, setup variables, project layout.
+  - [ ] Replace the degraded `s2-independent-review.png` (4 colours, text cut off) with a clean full screenshot of the Preview dashboard.
 - [ ] **S2-11** Complete regression, live end-to-end tests, demo, review and merge.
 
 ## Current task
