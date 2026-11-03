@@ -1,8 +1,10 @@
 # Crux
 
-**AI research that stress tests its own conclusions.**
+**The Research Engine That Challenges Its Own Conclusions—and Learns from Independent Criticism**
 
-**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
+> **Season 2 direction (work in progress):** Crux becomes a research engine that can be independently challenged, correct its reasoning, and demonstrate what improved. The first external evaluation has been accepted by Reppo; automated correction and measured improvement are still being built.
+
+**Try the stable Season 1 app: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
 
 Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
@@ -237,15 +239,59 @@ tests/                        Vitest unit tests
 docs/screenshots/             The images in this README
 ```
 
-## Season 2 (development branch): Reppo independent review
+## Season 2: independently challenged research
 
-This branch preserves the Season 1 SERV Reasoning V2 research pipeline, citation checks, and PDF export, while adding optional independent evaluation through Reppo. There is no native SERV V3 Graph Sharding.
+### Product positioning
 
-A completed live report can be submitted after explicit user consent to share a compact evidence trace with Reppo. The original report returns immediately; users can check for a verdict after the evaluation window (minimum 10 minutes). Reppo assessments are independent critiques, not factual guarantees. Automated SERV feedback-driven corrections are planned but are **not yet implemented**.
+**Crux: The Research Engine That Challenges Its Own Conclusions—and Learns from Independent Criticism**
 
-Set `REPPO_API_KEY` and `CRUX_REVIEW_ACCESS_TOKEN` (24+ random characters) in your server environment and explicitly enable `REPPO_REVIEW_ENABLED=1` for evaluation submissions. To submit or refresh a verdict, enter the owner review access key in the review panel; it is held only in browser memory. This is a pilot-only control, not multi-user authentication. Never reuse your Reppo API key as the owner review key. Never add these secrets to Git. Live submissions can consume evaluation credits; do not enable the public endpoint without suitable authentication and usage controls. On Vercel, the Upstash integration can automatically provide `KV_REST_API_URL` and `KV_REST_API_TOKEN` for durable report and evaluation storage; Crux also accepts the direct `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` pair. Use a complete matching pair. Otherwise the review action is unavailable. For local development, reports are saved as JSON. Reppo submissions may be accessible to signed-in network participants, so the user is asked to opt in and to avoid confidential information.
+**Our pitch:** Crux uses SERV Reasoning to investigate a difficult business question, build a thesis, and challenge its assumptions. Reppo then independently evaluates the reasoning and identifies weaknesses. Instead of merely displaying a score, Crux turns the feedback into targeted research, produces an auditable revision, and measures what actually improved.
 
-Validate with `npm test`, `npm run typecheck`, `npm run lint`, and `npm run build`. The Reppo tests use mocked HTTP calls and do not spend credits. No live Reppo evaluation has been run yet. The S2 Preview-only setup helper at `/reppo-connect` checks Reppo authentication (`GET /agents/eval-requests/pending`) and Redis PING without submitting an evaluation. It requires `CRUX_REVIEW_ACCESS_TOKEN` and displays only connection statuses.
+Crux becomes a research engine that can be **independently challenged, correct its reasoning, and demonstrate what improved**.
+
+This is the **Season 2 product vision**. The Reppo submission path works and one live evaluation has reached **Awaiting review**; the SERV feedback-driven correction, revision comparison and improvement metrics described below are **planned**, not already shipped.
+
+### Before and after Reppo integration
+
+| Before — Season 1: internal stress testing | After — Season 2: external review added |
+| --- | --- |
+| ![Original Crux What changed view, showing the internal thesis revision](docs/screenshots/what-changed.png) | ![Crux Independent review panel with a successfully submitted Reppo evaluation awaiting verdict](docs/screenshots/s2-independent-review.png) |
+| SERV questions, challenges and re-evaluates its own thesis. | Users can opt in to submit a completed live research trace to Reppo and check for an independent verdict. |
+
+The **before** image is from the existing Season 1 screenshot collection. The **after** image is an actual Season 2 Preview screenshot showing the accepted submission's *Awaiting review* state, **not** a completed verdict or automatic correction. Screenshots document the feature change; they do not demonstrate improved research accuracy.
+
+### How Season 2 is designed to work
+
+1. **Research with SERV Reasoning V2 and Tavily.** Crux searches both supportive and contradictory evidence, extracts source-linked claims and checks exact quotes.
+2. **Commit and stress-test a thesis.** SERV documents assumptions, contradictory evidence, alternative explanations, and uncertainties.
+3. **Re-evaluate and conclude.** The original six-stage pipeline remains in place: Research → Thesis → Stress test → Re-evaluate → Conclusion → What changed.
+4. **Independent evaluation through Reppo (implemented).** With explicit consent and an owner access key, submit a compact evidence trace and five plain-language criteria: claim/source support, counter-evidence, logical consistency, confidence calibration and proposed validation steps. Reppo's assessment is external feedback, **not factual certification**.
+5. **Targeted SERV V2 corrections (planned).** Translate settled Reppo critiques into actionable research questions and revisit only the impacted claims, assumptions or reasoning; add fresh evidence when warranted rather than rerunning the entire report blindly.
+6. **Auditable revisions (planned).** Preserve the initial report and Reppo feedback, create a new report revision with linked sources and changes, and show precisely what changed and why.
+7. **Measured improvement (planned).** Compare evidence coverage, unsupported-claim counts, critiques addressed, confidence justification and the external assessment across versions. Avoid claiming that a higher score proves the answer is true.
+
+**Framework constraint:** This is **SERV Reasoning V2**, *not* SERV V3. No Graph Sharding feature is assumed or required. The existing Crux dashboard, visual design, PDF report, traceable evidence, and reasoning workflow are retained; Season 2 adds the external review and correction loop.
+
+### Implementation status
+
+| Capability | Status |
+| --- | --- |
+| Six-step SERV V2 research, adversarial stress test, claim/quote checks and PDF output | Implemented in Season 1; preserved |
+| Opt-in Reppo submission with five evaluation criteria and bounded trace size | Implemented; first submission accepted |
+| Owner-only endpoints; credentials kept server-side; Redis persistence | Implemented for Preview pilot |
+| Independent review link after the six progress indicators | Implemented in Season 2; links to the review panel |
+| Submit accepted, pending review state, and check-for-verdict UI | Submitted successfully; final settled verdict not yet verified |
+| Critique-driven targeted investigation and SERV V2 revisions | Planned |
+| Immutable original and linked revised report, audit trail and before/after metrics | Planned |
+| Production-safe multi-user auth, quotas, cost controls and merge to `main` | Not complete |
+
+**Architecture:** Next.js / TypeScript UI + NDJSON pipeline → SERV Reasoning V2 stages + Tavily evidence → persisted `ResearchProject` in Upstash Redis REST → opt-in Reppo Evaluation API → saved `evalId`, pending / settled result → (planned) targeted correction and versioned comparison. The Reppo evaluation is asynchronous and does not block the original answer.
+
+**Data and consent:** Reppo receives a compact, source-linked **text** trace, not the entire saved project. Judging network participants may see submitted information. Do not submit confidential or sensitive research. Evaluation may consume credits; the owner-token gate in this preview is a pilot-only control, **not** multi-tenant user authentication. The no-charge preflight checks the payload and criteria locally, without contacting Reppo. The `/reppo-connect` page checks Reppo authentication and Redis PING without initiating a paid evaluation.
+
+**Preview configuration:** Keep `REPPO_API_KEY` and `CRUX_REVIEW_ACCESS_TOKEN` (24+ random characters) private; set `REPPO_REVIEW_ENABLED=1` only where paid evaluation is intended. Use either the Vercel Upstash integration's `KV_REST_API_URL` + `KV_REST_API_TOKEN` or the direct `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` pair. Preview work happens on `feat/s2-reppo-review`; the live Season 1 `main` branch is deliberately unchanged.
+
+**Validation:** `npm test`, `npm run typecheck`, `npm run lint`, `npm run build`. Automated tests mock external API calls, so they don't spend Reppo credits. The first live Reppo evaluation has been accepted and is awaiting its verdict; until that verdict is retrieved, **do not claim the independent review improved the conclusion**. Development milestones and blockers live in [the S2 task tracker](docs/S2_TASKS.md).
 
 ## Known limitations
 

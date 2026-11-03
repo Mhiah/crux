@@ -18,10 +18,10 @@
   - [x] Screenshot of S2 Preview `/reppo-connect`: Reppo authenticated (HTTP 200); Redis PING succeeded. No evaluation submitted.
   - [x] Owner reports `REPPO_REVIEW_ENABLED=1` saved on the S2 Preview branch; deployment behavior still needs a live verification.
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
-- [ ] **S2-07** A live report was saved and its no-charge preflight succeeded. First submission returned HTTP 400 (missing `criteria`); Reppo console showed no evaluations at the time checked. Fixed request shape to include 5 review criteria (string array) in the S2 branch. **Next: check CI and Preview deployment, rerun preflight and confirm 5 criteria before any new paid submission.**
+- [ ] **S2-07** Live Reppo submission accepted after fixing the required `criteria` field; screenshot shows **Awaiting review**. **Next: retrieve settled verdict and confirm it persists.**
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
-- [ ] **S2-10** Adjust tagline and integrate evaluation/revision output into the *existing* dashboard. No redesign.
+- [ ] **S2-10** Update README Season 2 positioning, preserve dashboard design, link **Independent review** directly after **What changed**, document real before/after screenshots. UI and documentation complete; later revision/result presentation remains pending.
 - [ ] **S2-11** Complete regression, live end-to-end tests, demo, review and merge.
 
 ## Current task

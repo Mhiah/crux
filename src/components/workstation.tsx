@@ -95,6 +95,13 @@ export function Progress({ project, active }: { project: ResearchProject | null;
           </li>
         );
       })}
+      {project?.status === "complete" && project.mode === "live" && (
+        <li>
+          <a href="#independent-review" className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-muted transition hover:border-foreground/40 hover:text-foreground">
+            Independent review <span aria-hidden="true">→</span>
+          </a>
+        </li>
+      )}
     </ol>
   );
 }

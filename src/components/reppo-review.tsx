@@ -68,9 +68,9 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
     finally { setBusy(false); }
   }
   return (
-    <section className="mt-6 rounded-xl border border-line p-4 sm:p-5" aria-label="Independent research review">
+    <section id="independent-review" className="mt-6 scroll-mt-24 rounded-xl border border-line p-4 sm:p-5" aria-label="Independent research review">
       <h2 className="text-lg font-semibold">Independent review</h2>
-      <p className="mt-2 text-sm text-muted">Reppo independently evaluates this research. Its verdict is feedback, not proof that every fact is correct.</p>
+      <p className="mt-2 text-sm text-muted">Powered by Reppo. An independent evaluation of the research and its reasoning—not proof that every fact is correct.</p>
       {!available ? (
         <p className="mt-3 text-sm text-muted">This report was not saved on the server. Enable durable storage to request an external review.</p>
       ) : (
