@@ -106,10 +106,10 @@ export default function Home() {
         {header}
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
           <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
-            AI research that stress tests its own conclusions.
+            Research that challenges itself.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
-            Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it.
+            SERV Reasoning stress tests every answer. Reppo independently reviews it.
           </p>
 
           <form
@@ -170,7 +170,7 @@ export default function Home() {
         )}
 
         <div className="mt-6 space-y-2 print:hidden">
-          <Progress project={project} active={active} />
+          <Progress project={project} active={active} reviewable={saved && !running} />
           {running && activeLabel && <p className="text-sm text-muted">Working on {activeLabel.toLowerCase()}…</p>}
         </div>
 

@@ -1,14 +1,20 @@
 # Crux
 
-**AI research that stress tests its own conclusions.**
+**The Research Engine That Challenges Its Own Conclusions—and Learns from Independent Criticism**
 
-**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
+Crux uses SERV Reasoning to investigate a difficult business question, build a thesis, and challenge its assumptions. Reppo then independently evaluates the reasoning and identifies weaknesses. Instead of merely displaying a score, Crux turns the feedback into targeted research, produces an auditable revision, and measures what actually improved.
+
+**Crux becomes a research engine that can be independently challenged, correct its reasoning, and demonstrate what improved.**
+
+**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)** (research, stress test, verified evidence, PDF brief, and Independent review)
+
+> **Season 2 status:** independent review through Reppo is live on the main site as an owner-only pilot: saved reports show the **Independent review** link, and only the owner key can request a review. The first evaluation was accepted by Reppo and is awaiting its verdict. Feedback-driven correction and measured improvement are next. See [Season 2](#season-2-independently-challenged-research) for exactly what works today and what is planned.
 
 Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
 Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ) for every reasoning step and [Tavily](https://tavily.com) for web search.
 
-![The Crux home page](docs/screenshots/landing.png)
+![The Crux home page](docs/screenshots/s2-home-after.png)
 
 ## Try it in a few minutes
 
@@ -163,9 +169,9 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 - **Live runs with SERV and Tavily.** Five live runs of the crypto question on 26 September 2026. The balanced-research change took the evidence from 24 for and 0 against to a real case against (6 to 9 facts against in each later run). The stronger-sources change took the source mix from 13 company or blog sites out of 20 to 1, with research, official statistics and industry reports making up 12.
 - **The screenshots** are from the fifth run, shown exactly as it came back. 3 of the 31 extracted facts were dropped because their quotes weren't in the source text (one rested on a Statista page whose figures sit behind a paywall), and 1 is flagged because it states a sample size its quote doesn't contain.
-- **Unit tests** (`npm test`, 75 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, the switch to sample data when credits run out, and the full pipeline end to end.
+- **Unit tests** (`npm test`, 89 tests): quote verification, figures in digits and words, source labels and selection (stronger sources first), balanced queries, ID and dash stripping (only this run's IDs, ranges and abbreviations handled), prompt-guard retries, the switch to sample data when credits run out, the full pipeline end to end, and (Season 2) the Reppo request shape, response parsing and owner-only access.
 - **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap.
-- **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`).
+- **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`), and GitHub Actions runs all four on every push to the Season 2 branch and every pull request to `main`, without live API calls.
 
 ## Run it locally
 
@@ -189,6 +195,10 @@ Each question uses about 6 SERV calls and 12 Tavily searches and takes around a 
 | `TAVILY_API_KEY` | Web search |
 | `SERV_MODEL` | Model to use through SERV (default `gpt-5.4-mini`) |
 | `SERV_SHADOW_AGENT` | `1` adds SERV's shadow-agent check to each stage (extra calls) |
+| `REPPO_API_KEY` | Season 2: Reppo Evaluation API key (server-side only) |
+| `REPPO_REVIEW_ENABLED` | Season 2: `1` turns on paid review requests; off by default |
+| `CRUX_REVIEW_ACCESS_TOKEN` | Season 2: private owner key (24+ random characters) required to request or check a review |
+| `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Season 2: Redis storage from Vercel's Upstash integration (or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN`) so reports are saved and can be reviewed |
 
 Other commands:
 
@@ -198,6 +208,7 @@ npm test            # unit tests
 npm run typecheck
 npm run lint
 npm run build
+npm run reppo:check # Season 2: checks the Reppo key with a read-only call; never submits or spends credits
 ```
 
 ## Deploy on Vercel
@@ -207,6 +218,8 @@ npm run build
 3. Redeploy (**Deployments → ⋯ → Redeploy**), because variables only apply to deployments made after they're added.
 
 A run takes about a minute, and the research API allows up to 300 seconds. On Vercel, runs aren't saved (functions can't keep files), so there is no "Saved report" link; use **Download** to keep a report.
+
+To enable Season 2 reviews on a deployment, also add the Redis variables (Vercel **Storage → Upstash Redis** adds them for you), `REPPO_API_KEY`, `CRUX_REVIEW_ACCESS_TOKEN` and `REPPO_REVIEW_ENABLED=1`, then redeploy. With Redis connected, runs are saved for 90 days and the "Saved report" link returns. Without these, the review section stays hidden.
 
 If SERV or Tavily credits run out, Crux doesn't fail: it shows the sample report instead, with a notice that the credits have run out and that the report isn't research on your question.
 
@@ -218,11 +231,15 @@ src/
     page.tsx                  Home page and live results
     research/[id]/page.tsx    A saved report
     api/research/             POST a question (streams NDJSON), GET a saved run
+    api/research/[id]/review/ Season 2: request a Reppo review, check for its verdict
+    api/reppo/connection/     Season 2: owner-only Reppo and Redis connection check (no charge)
+    reppo-connect/page.tsx    Season 2: page for that connection check
     icon.svg                  Tab icon
   components/
     workstation.tsx           Answer, Reasoning and Evidence views
     report-pdf.tsx            The PDF report
     refs.tsx                  Audit-trail panel
+    reppo-review.tsx          Season 2: the Independent review panel
     brand.tsx                 The CRUX wordmark
     site-header.tsx, theme-toggle.tsx, home-button.tsx
   lib/
@@ -231,21 +248,91 @@ src/
     research/                 Search, source selection, fact check, source labels
     plain.ts                  Turns cited IDs into plain sentences and Evidence links
     trace.ts                  Resolves any record to what it rests on and what uses it
+    reppo/                    Season 2: Reppo client, request builder, owner access, connection check
+    store.ts                  Saved runs: local files, or Redis on Vercel
     mock/                     Sample data for the tests
     types.ts                  The data model
 tests/                        Vitest unit tests
 docs/screenshots/             The images in this README
+docs/S2_TASKS.md              Season 2 task tracker
 ```
 
-## Season 2 (development branch): Reppo independent review
+## Season 2: independently challenged research
 
-This branch preserves the Season 1 SERV Reasoning V2 research pipeline, citation checks, and PDF export, while adding optional independent evaluation through Reppo. There is no native SERV V3 Graph Sharding.
+### Positioning
 
-A completed live report can be submitted after explicit user consent to share a compact evidence trace with Reppo. The original report returns immediately; users can check for a verdict after the evaluation window (minimum 10 minutes). Reppo assessments are independent critiques, not factual guarantees. Automated SERV feedback-driven corrections are planned but are **not yet implemented**.
+**Crux: The Research Engine That Challenges Its Own Conclusions—and Learns from Independent Criticism**
 
-Set `REPPO_API_KEY` and `CRUX_REVIEW_ACCESS_TOKEN` (24+ random characters) in your server environment and explicitly enable `REPPO_REVIEW_ENABLED=1` for evaluation submissions. To submit or refresh a verdict, enter the owner review access key in the review panel; it is held only in browser memory. This is a pilot-only control, not multi-user authentication. Never reuse your Reppo API key as the owner review key. Never add these secrets to Git. Live submissions can consume evaluation credits; do not enable the public endpoint without suitable authentication and usage controls. On Vercel, the Upstash integration can automatically provide `KV_REST_API_URL` and `KV_REST_API_TOKEN` for durable report and evaluation storage; Crux also accepts the direct `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` pair. Use a complete matching pair. Otherwise the review action is unavailable. For local development, reports are saved as JSON. Reppo submissions may be accessible to signed-in network participants, so the user is asked to opt in and to avoid confidential information.
+Crux uses SERV Reasoning to investigate a difficult business question, build a thesis, and challenge its assumptions. Reppo then independently evaluates the reasoning and identifies weaknesses. Instead of merely displaying a score, Crux turns the feedback into targeted research, produces an auditable revision, and measures what actually improved.
 
-Validate with `npm test`, `npm run typecheck`, `npm run lint`, and `npm run build`. The Reppo tests use mocked HTTP calls and do not spend credits. No live Reppo evaluation has been run yet. The S2 Preview-only setup helper at `/reppo-connect` checks Reppo authentication (`GET /agents/eval-requests/pending`) and Redis PING without submitting an evaluation. It requires `CRUX_REVIEW_ACCESS_TOKEN` and displays only connection statuses.
+Crux becomes a research engine that can be **independently challenged, correct its reasoning, and demonstrate what improved**.
+
+Season 1 made Crux argue with itself. Season 2 adds a critic from outside: the stress test is still SERV checking its own work, and Reppo's evaluators are an independent second opinion that Crux can learn from.
+
+### Before and after Reppo
+
+**1. The home page: the new tagline**
+
+| Before: Season 1 | After: Season 2 |
+| --- | --- |
+| ![Crux home page in Season 1: "AI research that stress tests its own conclusions."](docs/screenshots/s2-home-before.png) | ![Crux home page in Season 2: "Research that challenges itself."](docs/screenshots/s2-home-after.png) |
+| *AI research that stress tests its own conclusions.*<br>Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. | *Research that challenges itself.*<br>SERV Reasoning stress tests every answer. Reppo independently reviews it. |
+
+**2. The progress row: Independent review after What changed**
+
+| Before: Season 1 ends at What changed |
+| --- |
+| ![Season 1 progress row: Research, Thesis, Stress test, Re-evaluate, Conclusion, What changed](docs/screenshots/s2-progress-before.png) |
+
+| After: Season 2 adds Independent review |
+| --- |
+| ![Season 2 progress row: the same six stages, then an Independent review link](docs/screenshots/s2-progress-after.png) |
+
+In Season 1 all the criticism comes from inside Crux and the run ends at **What changed**. In Season 2, **Independent review** comes right after it: click it to open the review section, where the report can be sent to Reppo and its verdict and critiques appear. The link shows on finished live reports that are saved, so a review can be requested and checked later.
+
+### How it works
+
+1. **Research.** SERV plans balanced searches (half look for evidence against the answer), Tavily runs them, and Crux checks every quote against its source.
+2. **Thesis and stress test.** SERV commits to a first answer, then challenges it: weak assumptions, contradicting evidence, other explanations, risks and missing evidence.
+3. **Re-evaluate and conclude.** Every assumption gets a verdict, and **What changed** shows how the answer moved. The six Season 1 stages are unchanged.
+4. **Independent review (built).** After **What changed**, the **Independent review** link opens the review section. The owner enters the private review key, ticks consent, and Crux sends Reppo a compact, source-linked trace of the report with five criteria:
+   - Do the cited quotes support the key claims?
+   - Does the stress test fairly address the strongest counter-evidence?
+   - Does the conclusion follow from the evidence, challenges and re-evaluation?
+   - Is the confidence calibrated to the evidence and what's missing?
+   - Are the validation steps specific and relevant?
+
+   Reppo's network evaluates it (at least 10 minutes), and **Check for verdict** fetches the decision (accept, revise or reject), score, confidence and per-criterion critiques, which are saved with the report. A verdict is external feedback, **not** proof that every fact is correct.
+5. **Targeted correction (planned).** Turn each settled critique into a focused research question and revisit only the claims, assumptions or reasoning it affects, adding new evidence where needed, instead of rerunning the whole report.
+6. **Auditable revision (planned).** Keep the original report and the Reppo feedback unchanged, create a linked revision, and show exactly what changed and why, the same way **What changed** does today.
+7. **Measured improvement (planned).** Compare the versions: evidence coverage, unsupported claims, critiques addressed, confidence justification and the external assessment. A higher score is not treated as proof the answer is true.
+
+Season 2 builds on SERV Reasoning V2 (no V3 Graph Sharding), and keeps the Crux dashboard, evidence views, audit trail and PDF report as they are.
+
+### What works today
+
+| Capability | Status |
+| --- | --- |
+| Season 1: research, stress test, re-evaluation, verified evidence, audit trail, PDF | Live |
+| Reppo request with five criteria, a bounded trace (under 18 KB) and a no-charge size check | Built; first evaluation accepted by Reppo |
+| Owner-only review key, explicit consent, server-side keys, one request at a time per report | Built (pilot control, not user accounts) |
+| Saved reports in Redis (90 days) so a review can be requested and checked later | Live |
+| **Independent review** link after **What changed**, on live results and saved reports | Built |
+| Settled verdict retrieved and saved | Waiting for Reppo's verdict on the first evaluation |
+| Critique-driven correction, linked revisions, before/after metrics | Planned |
+| User accounts, quotas and cost limits for public reviews | Planned |
+
+### Data, consent and cost
+
+- Reppo receives a compact text trace of the report (question, thesis, challenges, re-evaluation, conclusion, a balanced sample of facts with their quotes, and the source list), not the whole saved project. Reppo's evaluators may see it, so don't submit confidential research.
+- Each evaluation can use a Reppo credit. Reviews are off unless `REPPO_REVIEW_ENABLED=1`, need the private owner key, and need consent ticked every time. **Check request (no charge)** shows the request size and criteria without contacting Reppo, and `/reppo-connect` checks the Reppo key and Redis without submitting anything.
+- Visitors can see the Independent review section on saved reports, but only the owner key can request a review or check a verdict, so visitors can never spend credits.
+
+### Architecture
+
+Next.js UI → NDJSON pipeline → SERV Reasoning stages + Tavily evidence → saved `ResearchProject` (Redis) → opt-in Reppo Evaluation API → saved evaluation ID, pending or settled verdict → (planned) targeted correction and versioned comparison. The review runs separately from the research, so it never slows down or blocks the original answer.
+
+Season 2 is merged into `main` and runs on the main site; further Season 2 work continues on `feat/s2-reppo-review` with a Vercel Preview. Milestones are tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md), and the Reppo API is documented at [reppofoundation.org/evaluation-api](https://www.reppofoundation.org/evaluation-api).
 
 ## Known limitations
 
@@ -254,6 +341,6 @@ Validate with `npm test`, `npm run typecheck`, `npm run lint`, and `npm run buil
 - **What the fact check proves.** That each quote really appears in its source, and that the fact's figures appear in it. It doesn't prove the fact's wording is a faithful summary beyond that. Spelled-out numbers are read up to ninety-nine.
 - **SERV's prompt guard** occasionally blocks harmless requests. Blocks are retried up to twice; if a run still fails, running it again usually works.
 - **One model.** Runs use `gpt-5.4-mini` through SERV unless `SERV_MODEL` is set; other models haven't been tested.
-- **Runs stay on one machine.** Reports are saved as local files, or not at all on Vercel, and are shared by downloading the PDF. There are no accounts.
+- **Saved reports.** Locally they are files; on Vercel they need the Redis integration (90 days), otherwise use the PDF. There are no user accounts yet; Season 2 reviews use a single owner key.
 - **The PDF has no page numbers.**
-- **No CI.** The checks are the unit tests, type check, lint, build and browser runs listed above.
+- **Independent review is a pilot.** Only the owner can request reviews, and turning critiques into corrections is still being built.

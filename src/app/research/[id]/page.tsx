@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { HomeButton } from "@/components/home-button";
 import { SiteHeader } from "@/components/site-header";
-import { Workstation } from "@/components/workstation";
+import { Progress, Workstation } from "@/components/workstation";
 import { loadProject } from "@/lib/store";
 
 /** A saved run, reopened from disk. Invalid or unknown IDs are a 404. */
@@ -26,6 +26,11 @@ export default async function ResearchPage(props: PageProps<"/research/[id]">) {
           {new Date(project.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
           {project.mode === "mock" && " · mock run (illustrative fixtures)"}
         </p>
+        {project.status === "complete" && (
+          <div className="mt-6 print:hidden">
+            <Progress project={project} active={null} reviewable />
+          </div>
+        )}
         {project.status === "failed" && (
           <p className="mt-4 rounded-lg bg-bad-soft px-3 py-2 text-sm text-bad">This run failed: {project.error}</p>
         )}
