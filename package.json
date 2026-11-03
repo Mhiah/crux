@@ -9,7 +9,8 @@
     "lint": "eslint",
     "research": "tsx --use-env-proxy --env-file-if-exists=.env.local scripts/research.ts",
     "test": "vitest run",
-    "typecheck": "next typegen && tsc --noEmit"
+    "typecheck": "next typegen && tsc --noEmit",
+    "reppo:check": "tsx --env-file-if-exists=.env.local scripts/check-reppo.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
