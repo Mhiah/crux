@@ -10,7 +10,7 @@
 - [x] **S2-02** Commit opt-in Reppo evaluation client, evidence trace, review panel and persistence support.
 - [x] **S2-03** Require owner authorization for both evaluation submission and verdict lookup. Review feature remains opt-in and disabled by default.
 - [x] **S2-04a** Confirm the Reppo submit, verdict lookup and pending-evaluation API paths against public Reppo documentation.
-- [ ] **S2-04b** Execute automated tests: unit tests, type checking, lint, build, and 401/403 denial checks.
+- [x] **S2-04b** GitHub Actions validation passed on commit `62b36a1`: 85 unit tests (including owner-auth denial), typecheck, lint and build. [View checks](https://github.com/Mhiah/crux/actions/runs/41642783506).
 - [ ] **S2-05** Set up server-side preview environment: `REPPO_API_KEY`, `CRUX_REVIEW_ACCESS_TOKEN`, `REPPO_REVIEW_ENABLED=1`, and durable storage. Never commit secrets.
 - [ ] **S2-06** Execute non-billable authenticated Reppo connection check (`npm run reppo:check`) and record HTTP status only.
 - [ ] **S2-07** With the owner's approval, submit one non-sensitive live report, retrieve the settled verdict and verify persistence, error handling and rate limits.
@@ -21,7 +21,7 @@
 
 ## Current task
 
-**S2-04b** — Run security and API unit tests. The endpoint protection code has been committed, but these checks still need to pass.
+**S2-05** — Configure private Reppo key, owner access token, and durable storage for the Vercel Preview environment. Leave paid submissions disabled until these are in place.
 
 ## Next user-owned setup step
 
