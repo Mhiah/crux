@@ -68,7 +68,8 @@ export async function GET(req: Request, ctx: RouteContext<"/api/research/[id]/re
     }
   }
   if (!project.reppo) return reply({ review: null });
-  if (project.reppo.status === "settled") return reply({ review: project.reppo });
+  // A settled verdict is final, unless it arrived in a shape Crux couldn't read: then read it again.
+  if (project.reppo.status === "settled" && !project.reppo.unread_fields) return reply({ review: project.reppo });
   if (!reviewEnabled()) return reply({ review: project.reppo, warning: "Reppo review refresh disabled." });
   try {
     const updated = await getReppoReview(project.reppo, process.env.REPPO_API_KEY!);

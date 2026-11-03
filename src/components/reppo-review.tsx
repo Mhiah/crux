@@ -103,7 +103,12 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
               {review.reppo_status ? `. Reppo says: ${review.reppo_status}` : ""}. No verdict yet; Reppo&apos;s evaluators can take longer than 10 minutes, so check again later.
             </p>
           )}
-          {review.status === "pending" && <button type="button" className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-50" disabled={busy || !accessToken.trim()} onClick={() => void refresh()}>{busy ? "Checking…" : "Check for verdict"}</button>}
+          {review.status === "settled" && review.unread_fields && (
+            <p className="text-muted" role="status">
+              Reppo has finished the review, but its verdict came in a format Crux doesn&apos;t read yet. Fields Reppo sent: {review.unread_fields.join("; ")}
+            </p>
+          )}
+          {(review.status === "pending" || review.unread_fields) && <button type="button" className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-50" disabled={busy || !accessToken.trim()} onClick={() => void refresh()}>{busy ? "Checking…" : "Check for verdict"}</button>}
         </div>
       ) : (
         <div className="mt-4 space-y-3">

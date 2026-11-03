@@ -54,33 +54,62 @@ export async function submitReppo(project: ResearchProject, key: string, transpo
   return id;
 }
 
+// Reppo's settled replies have used different field names; read every likely one.
+const SETTLED_WORDS = /^(settled|complete|completed|done|finished|finalized|finalised|resolved|closed)$/i;
+const DECISIONS: Record<string, ReppoDecision> = {
+  accept: "accept", accepted: "accept", approve: "accept", approved: "accept", pass: "accept", passed: "accept",
+  revise: "revise", revision: "revise", needs_revision: "revise", "needs revision": "revise", revise_and_resubmit: "revise",
+  reject: "reject", rejected: "reject", fail: "reject", failed: "reject",
+};
+const first = <T,>(...values: (T | undefined)[]) => values.find((v) => v !== undefined);
+const text = (v: Record<string, unknown>, keys: string[]) => first(...keys.map((k) => str(v[k])))?.trim() || undefined;
+
+/** Field names (never values) of Reppo's reply, two levels deep, shown when a settled verdict can't be read. */
+function fieldNames(data: Record<string, unknown>): string[] {
+  return Object.entries(data).slice(0, 25).map(([k, v]) => {
+    if (Array.isArray(v)) return `${k}[${Object.keys(obj(v[0])).slice(0, 8).join(", ")}]`;
+    const inner = Object.keys(obj(v));
+    return inner.length ? `${k}{${inner.slice(0, 10).join(", ")}}` : k;
+  });
+}
+
 export function normalizeReppoResponse(body: Record<string, unknown>, previous: ReppoReview): ReppoReview {
   const data = Object.keys(obj(body.data)).length ? obj(body.data) : body;
-  const verdict = obj(data.verdict);
+  const result = obj(data.result);
+  const verdict = Object.keys(obj(data.verdict)).length ? obj(data.verdict) : Object.keys(obj(result.verdict)).length ? obj(result.verdict) : result;
   const action = obj(data.action);
-  // Reppo's documented shape is verdict.decision; also accept a decision at the top level.
-  const choice = (str(verdict.decision) ?? str(data.decision))?.toLowerCase();
-  const reppoStatus = (str(data.status) ?? str(data.state))?.slice(0, 40);
-  const decision = (["accept", "revise", "reject"] as const).find((x) => x === choice) as ReppoDecision | undefined;
-  const confidence = (["low", "medium", "high"] as const).find((x) => x === str(verdict.confidence)?.toLowerCase());
-  const critiques = (Array.isArray(data.verdicts) ? data.verdicts : []).map(obj).map((v, index) => ({
-    dimension: str(v.dimension) ?? str(v.name) ?? ("Criterion " + (index + 1)),
-    critique: str(v.critique) ?? str(v.rationale) ?? "No written critique returned.",
+  const reppoStatus = (str(data.status) ?? str(data.state) ?? str(result.status))?.slice(0, 40);
+
+  const choice = first(text(verdict, ["decision", "outcome", "result", "verdict", "label"]), text(data, ["decision", "outcome"]), str(data.verdict))?.toLowerCase();
+  const decision = choice ? DECISIONS[choice] : undefined;
+  const confidence = (["low", "medium", "high"] as const).find((x) => x === (text(verdict, ["confidence"]) ?? text(data, ["confidence"]))?.toLowerCase());
+  const score = first(...["score", "finalScore", "final_score", "averageScore", "avgScore", "overallScore"].map((k) => num(verdict[k]) ?? num(data[k])));
+
+  const lists = ["verdicts", "critiques", "assessments", "peerAssessments", "results", "criteria", "dimensions", "evaluations", "feedback"];
+  const items = first(...lists.map((k) => (Array.isArray(data[k]) ? data[k] : Array.isArray(verdict[k]) ? verdict[k] : undefined) as unknown[] | undefined)) ?? [];
+  const critiques = items.map(obj).map((v, index) => ({
+    dimension: text(v, ["dimension", "criterion", "name", "title", "label"]) ?? "Criterion " + (index + 1),
+    critique: text(v, ["critique", "rationale", "feedback", "comment", "reasoning", "explanation", "summary", "text"]) ?? "No written critique returned.",
     ...(num(v.score) !== undefined ? { score: num(v.score) } : {}),
-  }));
-  const mainCritique = str(verdict.critique) ?? str(verdict.rationale);
+  })).filter((c) => c.critique !== "No written critique returned." || c.score !== undefined);
+  const mainCritique = text(verdict, ["critique", "rationale", "feedback", "summary", "reasoning", "explanation"]) ?? text(data, ["critique", "rationale", "feedback", "summary"]);
   if (!critiques.length && mainCritique) critiques.push({ dimension: "Overall", critique: mainCritique });
+
+  // Reppo saying it has finished is enough to stop waiting, even if the verdict's shape is new.
+  const settled = Boolean(decision) || (reppoStatus !== undefined && SETTLED_WORDS.test(reppoStatus));
+  const unread = settled && !decision && !critiques.length;
   return {
     ...previous,
     checked_at: new Date().toISOString(),
-    status: decision ? "settled" : "pending",
+    status: settled ? "settled" : "pending",
     ...(decision ? { decision } : {}),
-    ...(num(verdict.score) !== undefined ? { score: num(verdict.score) } : {}),
+    ...(score !== undefined ? { score } : {}),
     ...(confidence ? { confidence } : {}),
     ...(str(action.route) ? { route: str(action.route) } : {}),
     critiques: critiques.length ? critiques : previous.critiques,
     ...(num(data.peerAssessmentCount) !== undefined ? { peer_assessment_count: num(data.peerAssessmentCount) } : {}),
     ...(reppoStatus ? { reppo_status: reppoStatus } : {}),
+    ...(unread ? { unread_fields: fieldNames(data) } : { unread_fields: undefined }),
   };
 }
 

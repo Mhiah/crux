@@ -79,3 +79,25 @@ describe("verdict checks", () => {
     expect(normalizeReppoResponse({ status: "settled", decision: "Accept", score: 80 }, pending)).toMatchObject({ status: "settled", decision: "accept" });
   });
 });
+
+describe("reading a settled verdict", () => {
+  const pending: ReppoReview = { eval_id: "eval_1234", submitted_at: "2026-11-03T00:00:00Z", status: "pending", critiques: [] };
+  it("stops waiting when Reppo says SETTLED, and lists the fields it couldn't read", () => {
+    const r = normalizeReppoResponse({ data: { status: "SETTLED", evalId: "eval_1234", outcome_blob: { x: 1 } } }, pending);
+    expect(r.status).toBe("settled");
+    expect(r.unread_fields?.join(" ")).toMatch(/outcome_blob\{x\}/);
+  });
+  it("reads other common shapes for the decision, score and critiques", () => {
+    const r = normalizeReppoResponse({
+      status: "SETTLED",
+      result: { outcome: "REJECTED", finalScore: 41 },
+      assessments: [{ criterion: "Evidence", feedback: "Quotes are thin." }, { criterion: "Confidence", comment: "Overstated." }],
+    }, pending);
+    expect(r).toMatchObject({ status: "settled", decision: "reject", score: 41 });
+    expect(r.critiques.map((c) => c.dimension)).toEqual(["Evidence", "Confidence"]);
+    expect(r.unread_fields).toBeUndefined();
+  });
+  it("keeps waiting while Reppo is still working", () => {
+    expect(normalizeReppoResponse({ status: "PENDING" }, pending).status).toBe("pending");
+  });
+});

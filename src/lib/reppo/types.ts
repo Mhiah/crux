@@ -13,4 +13,6 @@ export type ReppoReview = {
   peer_assessment_count?: number;
   /** Reppo's own status word from the last check (e.g. "pending"), shown so a slow review is visible. */
   reppo_status?: string;
+  /** When Reppo says it's finished but the verdict can't be read: the field names it sent. */
+  unread_fields?: string[];
 };
