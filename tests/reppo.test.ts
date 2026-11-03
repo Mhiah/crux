@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildReppoPayload } from "../src/lib/reppo/payload";
+import { buildReppoPayload, inspectReppoPayload } from "../src/lib/reppo/payload";
 import { normalizeReppoResponse, submitReppo } from "../src/lib/reppo/client";
 import type { ResearchProject } from "../src/lib/types";
 import type { ReppoReview } from "../src/lib/reppo/types";
@@ -18,9 +18,10 @@ describe("S2 independent evaluation", () => {
     const data = buildReppoPayload(await fixture());
     expect(data.type).toBe("trace");
     expect(data.settlementMinutes).toBe(10);
-    expect(new TextEncoder().encode(data.payload).length).toBeLessThan(50_000);
+    expect(new TextEncoder().encode(data.payload).length).toBeLessThanOrEqual(18_000);
+    expect(inspectReppoPayload(await fixture()).request_bytes).toBeLessThan(20_000);
     const trace = JSON.parse(data.payload);
-    expect(trace.reasoning_audit).toHaveLength(6);
+    expect(trace.audit).toHaveLength(6);
     expect(trace.claims[0].quotes.length).toBeGreaterThan(0);
   });
   it("rejects mock and incomplete runs", async () => {
@@ -37,6 +38,14 @@ describe("S2 independent evaluation", () => {
       return new Response(JSON.stringify({ evalId: "eval_1234" }), { status: 200 });
     }) as typeof fetch;
     await expect(submitReppo(project, "test-key", transport)).resolves.toBe("eval_1234");
+  });
+  it("surfaces a short Reppo HTTP 400 validation message", async () => {
+    const project = await fixture();
+    const transport = (async () => new Response(JSON.stringify({ error: "payload is invalid" }), {
+      status: 400, headers: { "Content-Type": "application/json" },
+    })) as typeof fetch;
+    await expect(submitReppo(project, "test-key", transport))
+      .rejects.toMatchObject({ status: 400, reason: "payload is invalid" });
   });
   it("does not mark an incomplete response as settled", () => {
     const pending: ReppoReview = { eval_id: "eval_1234", submitted_at: "2026-11-03T00:00:00Z", status: "pending", critiques: [] };

@@ -10,6 +10,24 @@ const str = (value: unknown): string | undefined => typeof value === "string" ? 
 const num = (value: unknown): number | undefined =>
   typeof value === "number" && Number.isFinite(value) ? value : undefined;
 
+/** Bounded upstream validation errors only; never include request contents or authorization values. */
+export class ReppoApiError extends Error {
+  constructor(readonly status: number, readonly reason?: string) {
+    super("Reppo returned HTTP " + status + (reason ? ": " + reason : ""));
+    this.name = "ReppoApiError";
+  }
+}
+function safeReason(body: unknown): string | undefined {
+  const value = obj(body);
+  const error = obj(value.error);
+  const candidate = [value.message, value.error, error.message, value.detail]
+    .find((item) => typeof item === "string");
+  if (typeof candidate !== "string") return undefined;
+  const message = candidate.replace(/[\\r\\n\\t]/g, " ").trim();
+  if (!message || message.length > 180 || /authorization|bearer|api[_ -]?key|password|sk-[a-z0-9]/i.test(message)) return undefined;
+  return message;
+}
+
 async function send(path: string, key: string, init: RequestInit, transport: Fetcher): Promise<Record<string, unknown>> {
   if (!key) throw new Error("Reppo API key is missing.");
   const response = await transport(BASE + path, {
@@ -18,7 +36,10 @@ async function send(path: string, key: string, init: RequestInit, transport: Fet
     signal: AbortSignal.timeout(20_000),
     cache: "no-store",
   });
-  if (!response.ok) throw new Error("Reppo returned HTTP " + response.status);
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ReppoApiError(response.status, safeReason(body));
+  }
   return obj(await response.json());
 }
 

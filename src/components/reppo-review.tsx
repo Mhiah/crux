@@ -12,6 +12,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [preflight, setPreflight] = useState<string | null>(null);
   const path = "/api/research/" + project.id + "/review";
 
   async function refresh() {
@@ -26,6 +27,29 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
     } catch (err) { setError(err instanceof Error ? err.message : "Review refresh failed."); }
     finally { setBusy(false); }
   }
+  async function checkRequest() {
+    if (!accessToken.trim()) { setError("Enter the owner access key."); return; }
+    setBusy(true); setError(null); setPreflight(null);
+    try {
+      const response = await fetch(path + "?preflight=1", {
+        cache: "no-store", headers: { "x-crux-review-token": accessToken },
+      });
+      const data = await response.json() as {
+        diagnostics?: { payload_bytes: number; max_payload_bytes: number };
+        error?: string;
+        existing_review?: boolean;
+      };
+      if (!response.ok || !data.diagnostics) throw new Error(data.error ?? "Request check failed.");
+      setPreflight(
+        "Request prepared: " + data.diagnostics.payload_bytes.toLocaleString() +
+        " bytes (limit " + data.diagnostics.max_payload_bytes.toLocaleString() +
+        "). No evaluation submitted." +
+        (data.existing_review ? " A review is already stored for this report." : "")
+      );
+    } catch (err) { setError(err instanceof Error ? err.message : "Request check failed."); }
+    finally { setBusy(false); }
+  }
+
   if (project.mode !== "live" || project.status !== "complete") return null;
 
   async function submit() {
@@ -72,9 +96,17 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
             <input className="mt-1" type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
             <span>I agree to send a concise research and evidence trace to Reppo for external review. The submission may be visible to Reppo network participants; do not submit confidential information.</span>
           </label>
-          <button type="button" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={!consent || !accessToken.trim() || busy} onClick={() => void submit()}>{busy ? "Submitting…" : "Request Reppo review"}</button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="rounded-lg border border-line px-4 py-2 text-sm disabled:opacity-40" disabled={!accessToken.trim() || busy} onClick={() => void checkRequest()}>
+              {busy ? "Checking…" : "Check request (no charge)"}
+            </button>
+            <button type="button" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={!consent || !accessToken.trim() || busy} onClick={() => void submit()}>
+              {busy ? "Working…" : "Request Reppo review"}
+            </button>
+          </div>
         </div>
       ))}
+      {preflight && <p className="mt-3 text-sm text-muted" role="status">{preflight}</p>}
       {warning && <p className="mt-3 text-sm text-muted" role="status">{warning}</p>}
       {error && <p className="mt-3 text-sm text-bad" role="alert">{error}</p>}
     </section>

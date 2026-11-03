@@ -26,7 +26,7 @@
 
 ## Current task
 
-**S2-07 diagnostic** — In Vercel Preview deployment runtime Logs, locate the `Reppo submission failed:` error for `POST /api/research/[id]/review`. Note the HTTP status or stage, not secret values. Also check Reppo console's evaluation history to avoid duplicate charges. Existing S2 review route hides backend error detail behind 502. Do not re-submit until classified.
+**S2-07 troubleshooting** — Reppo returned upstream HTTP 400. Owner's Reppo console showed no evaluations. Added a compact evidence-linked submission, a no-charge preflight check, and bounded upstream error messages. Run CI and verify the new Preview build before using the preflight on the saved report. Do **not** retry a paid evaluation without explicit approval.\n\n**S2-07 diagnostic** — In Vercel Preview deployment runtime Logs, locate the `Reppo submission failed:` error for `POST /api/research/[id]/review`. Note the HTTP status or stage, not secret values. Also check Reppo console's evaluation history to avoid duplicate charges. Existing S2 review route hides backend error detail behind 502. Do not re-submit until classified.
 
 **S2-07 controlled test** — Owner reports the Preview-only evaluation flag is configured. Verify the latest Preview deployment, generate one non-sensitive **live** research report, then explicitly opt in before sending it to Reppo. Do not use mock reports or publish private information. Check the returned evaluation ID, settlement and persisted result.
 

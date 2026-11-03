@@ -1,5 +1,6 @@
 import { loadProject, saveProject, storageAvailable, acquireReviewLock, releaseReviewLock } from "@/lib/store";
-import { submitReppo, getReppoReview } from "@/lib/reppo/client";
+import { submitReppo, getReppoReview, ReppoApiError } from "@/lib/reppo/client";
+import { inspectReppoPayload } from "@/lib/reppo/payload";
 import { authorizedReview } from "@/lib/reppo/access";
 import type { ReppoReview } from "@/lib/reppo/types";
 
@@ -26,6 +27,11 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
     if (project.status !== "complete" || project.mode !== "live") {
       return reply({ error: "Only completed live reports can be reviewed." }, 409);
     }
+    const preflight = inspectReppoPayload(project);
+    console.info("Reppo submission size:", {
+      payload_bytes: preflight.payload_bytes,
+      request_bytes: preflight.request_bytes,
+    });
     const evalId = await submitReppo(project, process.env.REPPO_API_KEY!);
     const review: ReppoReview = {
       eval_id: evalId, status: "pending", submitted_at: new Date().toISOString(), critiques: [],
@@ -34,8 +40,15 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
     await saveProject(project);
     return reply({ review }, 201);
   } catch (error) {
-    console.error("Reppo submission failed:", error);
-    return reply({ error: "Unable to submit to Reppo. Check API access, credits, and logs." }, 502);
+    if (error instanceof ReppoApiError) {
+      console.error("Reppo rejected request:", { status: error.status, reason: error.reason ?? "No detail provided" });
+      return reply({
+        error: "Reppo returned HTTP " + error.status +
+          (error.reason ? ": " + error.reason : ".": ". See runtime logs."),
+      }, 502);
+    }
+    console.error("Reppo submission failed:", error instanceof Error ? error.message : "Unexpected error");
+    return reply({ error: "Unable to submit to Reppo. Inspect logs before retrying." }, 502);
   } finally {
     await releaseReviewLock(id).catch((error) => console.error("Could not release review lock:", error));
   }
@@ -47,6 +60,13 @@ export async function GET(req: Request, ctx: RouteContext<"/api/research/[id]/re
   const { id } = await ctx.params;
   const project = await loadProject(id).catch(() => null);
   if (!project) return reply({ error: "Report not found." }, 404);
+  if (new URL(req.url).searchParams.get("preflight") === "1") {
+    try {
+      return reply({ diagnostics: inspectReppoPayload(project), existing_review: Boolean(project.reppo) });
+    } catch (err) {
+      return reply({ error: err instanceof Error ? err.message : "Invalid report." }, 422);
+    }
+  }
   if (!project.reppo) return reply({ review: null });
   if (project.reppo.status === "settled") return reply({ review: project.reppo });
   if (!reviewEnabled()) return reply({ review: project.reppo, warning: "Reppo review refresh disabled." });
