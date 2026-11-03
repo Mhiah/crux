@@ -16,7 +16,7 @@
   - [x] Owner installed Redis integration; Vercel screenshot shows `KV_REST_API_URL` and `KV_REST_API_TOKEN` in Preview.
   - [x] Added support for this native Vercel KV REST variable pair in Crux.
   - [x] Screenshot of S2 Preview `/reppo-connect`: Reppo authenticated (HTTP 200); Redis PING succeeded. No evaluation submitted.
-  - [ ] Enable `REPPO_REVIEW_ENABLED=1` only when secure evaluation testing is ready.
+  - [x] Owner reports `REPPO_REVIEW_ENABLED=1` saved on the S2 Preview branch; deployment behavior still needs a live verification.
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
 - [ ] **S2-07** With the owner's approval, submit one non-sensitive live report, retrieve the settled verdict and verify persistence, error handling and rate limits.
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
@@ -26,7 +26,7 @@
 
 ## Current task
 
-**S2-05 / S2-07 preparation** — Connection verified. Next, confirm the evaluation submission protections and enable `REPPO_REVIEW_ENABLED=1` on the S2 Preview branch only; redeploy, then run one explicitly approved non-sensitive evaluation to validate the full submit/settle/read flow.
+**S2-07 controlled test** — Owner reports the Preview-only evaluation flag is configured. Verify the latest Preview deployment, generate one non-sensitive **live** research report, then explicitly opt in before sending it to Reppo. Do not use mock reports or publish private information. Check the returned evaluation ID, settlement and persisted result.
 
 ## Next user-owned setup step
 
