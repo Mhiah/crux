@@ -2,9 +2,18 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ResearchProject } from "./types";
 
-/** Local JSON in development; optional durable Upstash Redis REST for Vercel. */
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+/** Local JSON in development; durable Upstash Redis REST in Vercel Preview.
+ * The Vercel Marketplace integration creates KV_REST_API_* variable names,
+ * whereas direct Upstash accounts use UPSTASH_REDIS_REST_*.
+ * Choose a complete pair; never mix a URL from one provider with another token.
+ */
+const directUrl = process.env.UPSTASH_REDIS_REST_URL;
+const directToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const integratedUrl = process.env.KV_REST_API_URL;
+const integratedToken = process.env.KV_REST_API_TOKEN;
+const directConfigured = Boolean(directUrl && directToken);
+const redisUrl = directConfigured ? directUrl : integratedUrl;
+const redisToken = directConfigured ? directToken : integratedToken;
 const useRedis = Boolean(redisUrl && redisToken);
 export const storageAvailable = useRedis || !process.env.VERCEL || Boolean(process.env.CRUX_DATA_DIR);
 const DATA_DIR = process.env.CRUX_DATA_DIR || path.join(process.cwd(), ".data", "projects");
