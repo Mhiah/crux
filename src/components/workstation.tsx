@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { RefsProvider, useTrace } from "./refs";
+import { ReppoReviewPanel } from "./reppo-review";
 import { claimsBehind, factCheckSummary, recordIds, refsIn, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
 import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type ResearchProject, type Source, type Stage } from "@/lib/types";
@@ -141,7 +142,7 @@ const VIEWS: { key: View; label: string }[] = [
 ];
 
 /** `downloadable` is off while a run is still streaming, so nobody saves half a report. */
-export function Workstation({ project, downloadable = true }: { project: ResearchProject; downloadable?: boolean }) {
+export function Workstation({ project, downloadable = true, reviewAvailable = true }: { project: ResearchProject; downloadable?: boolean; reviewAvailable?: boolean }) {
   const [view, setView] = useState<View>("answer");
   const [focus, setFocus] = useState<Focus>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -191,6 +192,7 @@ export function Workstation({ project, downloadable = true }: { project: Researc
 
           <div className={panel("answer")}>
             <AnswerView project={project} />
+            <ReppoReviewPanel project={project} available={reviewAvailable} />
           </div>
           <div className={`${panel("reasoning")} print:mt-12`}>
             <ReasoningView project={project} />

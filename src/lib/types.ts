@@ -1,4 +1,5 @@
 import type { SourceKind } from "./research/sources";
+import type { ReppoReview } from "./reppo/types";
 
 /**
  * Domain model for a research run. Mirrors the build plan's data model:
@@ -179,6 +180,8 @@ export type ResearchProject = {
   reevaluation: Reevaluation | null;
   conclusion: Conclusion | null;
   what_changed: WhatChanged | null;
+  /** Optional external review; never present for an unsubmitted research report. */
+  reppo?: ReppoReview;
   audit: ReasoningAudit[];
   error: string | null;
   /** Why a mock run is on sample data, when it fell back from a live run that ran out of credits. */

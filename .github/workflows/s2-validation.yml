@@ -1,0 +1,31 @@
+name: Crux S2 validation
+on:
+  push:
+    branches: [feat/s2-reppo-review]
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Run unit tests (no live API calls)
+        run: npm test
+        env:
+          CRUX_MOCK: "1"
+          CRUX_MOCK_DELAY_MS: "0"
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
