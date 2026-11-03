@@ -101,3 +101,14 @@ describe("reading a settled verdict", () => {
     expect(normalizeReppoResponse({ status: "PENDING" }, pending).status).toBe("pending");
   });
 });
+
+describe("reviewer labels", () => {
+  it("names unnamed critiques by reviewer, and relabels older saves", async () => {
+    const pending: ReppoReview = { eval_id: "e", submitted_at: "2026-11-03T00:00:00Z", status: "pending", critiques: [] };
+    const r = normalizeReppoResponse({ verdict: { decision: "revise" }, verdicts: [{ critique: "Thin evidence." }, { rationale: "Overconfident." }] }, pending);
+    expect(r.critiques.map((c) => c.dimension)).toEqual(["Reviewer 1", "Reviewer 2"]);
+    const { reviewerLabel } = await import("../src/components/reppo-review");
+    expect(reviewerLabel("Criterion 3")).toBe("Reviewer 3");
+    expect(reviewerLabel("Evidence")).toBe("Evidence");
+  });
+});

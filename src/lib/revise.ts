@@ -85,7 +85,9 @@ export async function reviseWithFeedback(
   const research = original.research!;
   const conclusion = original.conclusion!;
   const review = original.reppo!;
-  const critiques: Critique[] = review.critiques.slice(0, MAX_CRITIQUES).map((c) => ({ dimension: c.dimension, critique: c.critique }));
+  const critiques: Critique[] = review.critiques
+    .slice(0, MAX_CRITIQUES)
+    .map((c) => ({ dimension: c.dimension.replace(/^Criterion (\d+)$/, "Reviewer $1"), critique: c.critique }));
   const warnings: string[] = [];
   const { question } = original;
 

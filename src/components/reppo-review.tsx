@@ -5,6 +5,9 @@ import { useState } from "react";
 import type { ResearchProject } from "@/lib/types";
 import type { ReppoReview } from "@/lib/reppo/types";
 
+/** Reppo returns one critique per evaluator, not per criterion; older saves called them "Criterion n". */
+export const reviewerLabel = (dimension: string) => dimension.replace(/^Criterion (\d+)$/, "Reviewer $1");
+
 /** Reppo review is optional: users must opt in to submitting their research. */
 export function ReppoReviewPanel({ project, available }: { project: ResearchProject; available: boolean }) {
   const router = useRouter();
@@ -61,7 +64,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
     finally { setBusy(false); }
   }
   return (
-    <section id="independent-review" className="mt-6 scroll-mt-24 rounded-xl border border-line p-4 sm:p-5" aria-label="Independent research review">
+    <section id="independent-review" className="scroll-mt-24 rounded-xl border border-line p-4 sm:p-5" aria-label="Independent research review">
       <h2 className="text-lg font-semibold">Independent review</h2>
       <p className="mt-2 text-sm text-muted">Powered by Reppo. An independent evaluation of the research and its reasoning, not proof that every fact is correct.</p>
       {!available ? (
@@ -80,7 +83,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
           <p><strong>Status:</strong> {review.status === "pending" ? "Awaiting review (minimum 10-minute settlement)" : "Settled"}</p>
           {review.decision && <p><strong>Decision:</strong> {review.decision}{review.score !== undefined ? " · score " + review.score + "/100" : ""}{review.confidence ? " · " + review.confidence + " confidence" : ""}</p>}
           {review.route && <p><strong>Suggested action:</strong> {review.route}</p>}
-          {review.critiques.map((c, i) => <div key={i} className="border-t border-line pt-2"><strong>{c.dimension}</strong><p className="mt-1 text-muted">{c.critique}</p></div>)}
+          {review.critiques.map((c, i) => <div key={i} className="border-t border-line pt-2"><strong>{reviewerLabel(c.dimension)}</strong><p className="mt-1 text-muted">{c.critique}</p></div>)}
           {review.status === "settled" && review.critiques.length > 0 && (
             <div className="border-t border-line pt-3">
               {improved ? (

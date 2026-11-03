@@ -33,9 +33,9 @@ Before, the report ended at What changed:
 
 ![The first Crux: the six steps ending at What changed](docs/screenshots/s2-report-before.png)
 
-Now, Independent review comes right after it:
+Now, Independent review comes right after it, and has its own tab next to Evidence:
 
-![Crux with Reppo: the six steps, then Independent review](docs/screenshots/s2-report-after.png)
+![Crux with Reppo: the six steps, then Independent review, and an Independent review tab after Evidence](docs/screenshots/s2-report-after.png)
 
 | | Before | Now |
 | --- | --- | --- |
@@ -75,7 +75,7 @@ Crux's stress test is SERV checking SERV. Independent review gets a second opini
 
 How it works on a report:
 
-1. Click **Independent review** after What changed, enter the owner key, tick consent and choose **Request Reppo review**.
+1. Click **Independent review**, the step after What changed or the tab after Evidence, enter the owner key, tick consent and choose **Request Reppo review**.
 2. Crux sends Reppo a compact trace of the report: the question, the thesis and its assumptions, the challenges, the re-evaluation, the conclusion, a balanced sample of facts with their quotes, and the source list.
 3. After at least 10 minutes, **Check for verdict** fetches the result: accept, revise or reject, with a score, a confidence and a critique for each criterion. It's saved with the report, and the step turns green.
 

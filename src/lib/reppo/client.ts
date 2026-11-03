@@ -88,7 +88,7 @@ export function normalizeReppoResponse(body: Record<string, unknown>, previous: 
   const lists = ["verdicts", "critiques", "assessments", "peerAssessments", "results", "criteria", "dimensions", "evaluations", "feedback"];
   const items = first(...lists.map((k) => (Array.isArray(data[k]) ? data[k] : Array.isArray(verdict[k]) ? verdict[k] : undefined) as unknown[] | undefined)) ?? [];
   const critiques = items.map(obj).map((v, index) => ({
-    dimension: text(v, ["dimension", "criterion", "name", "title", "label"]) ?? "Criterion " + (index + 1),
+    dimension: text(v, ["dimension", "criterion", "name", "title", "label"]) ?? "Reviewer " + (index + 1),
     critique: text(v, ["critique", "rationale", "feedback", "comment", "reasoning", "explanation", "summary", "text"]) ?? "No written critique returned.",
     ...(num(v.score) !== undefined ? { score: num(v.score) } : {}),
   })).filter((c) => c.critique !== "No written critique returned." || c.score !== undefined);

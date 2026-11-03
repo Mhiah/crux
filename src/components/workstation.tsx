@@ -77,10 +77,7 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
-/**
- * Independent review is the step after What changed. Its panel sits at the end of the Answer
- * view, so clicking the step switches to Answer before scrolling to it.
- */
+/** Independent review is the step after What changed; clicking it opens the review tab. */
 const SHOW_REVIEW = "crux:show-review";
 function showReview(event: MouseEvent<HTMLAnchorElement>) {
   event.preventDefault();
@@ -130,7 +127,7 @@ export function Progress({ project, active, reviewable = false }: { project: Res
 // ---------------------------------------------------------------------------------------
 // Views and the "Evidence" link that ties them together
 
-type View = "answer" | "reasoning" | "evidence";
+type View = "answer" | "reasoning" | "evidence" | "review";
 type Focus = { label: string; claimIds: string[] } | null;
 type Nav = {
   project: ResearchProject;
@@ -163,10 +160,11 @@ function EvidenceLink({ label, ids = [], text = "" }: { label: string; ids?: str
   );
 }
 
-const VIEWS: { key: View; label: string }[] = [
+const VIEWS: { key: View; label: string; short?: string }[] = [
   { key: "answer", label: "Answer" },
   { key: "reasoning", label: "Reasoning" },
   { key: "evidence", label: "Evidence" },
+  { key: "review", label: "Independent review", short: "Review" },
 ];
 
 /** `downloadable` is off while a run is still streaming, so nobody saves half a report. */
@@ -180,11 +178,13 @@ export function Workstation({ project, downloadable = true, reviewAvailable = tr
     if (next !== "evidence") setFocus(null);
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  // The review tab only exists where a review can be requested or one is already saved.
+  const reviewShown = project.mode === "live" && project.status === "complete" && (reviewAvailable || Boolean(project.reppo));
   useEffect(() => {
     const open = () => {
-      setView("answer");
+      setView("review");
       setFocus(null);
-      requestAnimationFrame(() => document.getElementById("independent-review")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener(SHOW_REVIEW, open);
     return () => window.removeEventListener(SHOW_REVIEW, open);
@@ -209,19 +209,26 @@ export function Workstation({ project, downloadable = true, reviewAvailable = tr
         <div ref={top} className="scroll-mt-4">
           <PrintHeader project={project} />
           <div className="sticky top-0 z-10 -mx-5 mb-6 flex items-center gap-2 border-b border-line bg-background/90 px-5 py-2 backdrop-blur print:hidden">
-            <nav className="flex gap-1" aria-label="Report views">
-              {VIEWS.map((v) => (
+            <nav className="flex min-w-0 gap-0.5 overflow-x-auto [scrollbar-width:none] sm:gap-1" aria-label="Report views">
+              {VIEWS.filter((v) => v.key !== "review" || reviewShown).map((v) => (
                 <button
                   key={v.key}
                   type="button"
                   aria-current={view === v.key ? "page" : undefined}
                   onClick={() => go(v.key)}
-                  className={`rounded-full px-3 py-1.5 text-sm font-medium transition max-[359px]:px-2.5 sm:px-3.5 ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-2 py-1.5 text-[13px] font-medium transition sm:px-3.5 sm:text-sm ${
                     view === v.key ? "bg-foreground text-background" : "text-muted hover:text-foreground"
                   }`}
                 >
-                  {v.label}
-                  {v.key === "evidence" && project.research ? <span className="ml-1 opacity-60 max-[359px]:hidden">{project.research.claims.length}</span> : null}
+                  {v.short ? (
+                    <>
+                      <span className="max-sm:hidden">{v.label}</span>
+                      <span className="sm:hidden">{v.short}</span>
+                    </>
+                  ) : (
+                    v.label
+                  )}
+                  {v.key === "evidence" && project.research ? <span className="ml-1 opacity-60 max-[400px]:hidden">{project.research.claims.length}</span> : null}
                 </button>
               ))}
             </nav>
@@ -230,7 +237,6 @@ export function Workstation({ project, downloadable = true, reviewAvailable = tr
 
           <div className={panel("answer")}>
             <AnswerView project={project} />
-            <ReppoReviewPanel project={project} available={reviewAvailable} />
           </div>
           <div className={`${panel("reasoning")} print:mt-12`}>
             <ReasoningView project={project} />
@@ -238,6 +244,11 @@ export function Workstation({ project, downloadable = true, reviewAvailable = tr
           <div className={`${panel("evidence")} print:mt-12`}>
             <EvidenceView project={project} focus={focus} clearFocus={() => setFocus(null)} />
           </div>
+          {reviewShown && (
+            <div className={view === "review" ? "block" : "hidden"}>
+              <ReppoReviewPanel project={project} available={reviewAvailable} />
+            </div>
+          )}
 
         </div>
       </NavCtx.Provider>
@@ -276,7 +287,7 @@ function Downloads({ project }: { project: ResearchProject }) {
   }
 
   return (
-    <div className="ml-auto flex items-center gap-1">
+    <div className="ml-auto flex shrink-0 items-center gap-1">
       {failed && <span className="text-xs text-bad">PDF failed, try again</span>}
       <button
         type="button"
