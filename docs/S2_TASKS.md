@@ -26,6 +26,8 @@
 
 ## Current task
 
+**S2-07.3 preflight — passed:** Owner reports the fresh Preview page displays `Criteria included: 5`. This is local validation only; no Reppo evaluation was submitted by the check. **Next: S2-07.4 — one consented real submission and confirmation of evaluation ID/pending status; may consume a credit.**
+
 **S2-07: Fix Reppo submission validation.** The latest Reppo error was `HTTP 400: criteria: Required`. The initial payload omitted the `criteria` field; the deployed gateway expects it as an array of 1–10 strings. We added five Crux-specific criteria (citation support, counter-evidence, reasoning consistency, calibrated confidence, validation steps) to the request builder, with unit tests. The existing no-charge preflight now displays the criteria count. No live Reppo submission was performed by this code change.
 
 **Next:** Check green CI and Ready Preview for the latest commit. Open the *existing saved report*, enter the owner review key, click **Check request (no charge)** and confirm **Criteria included: 5**. Only then attempt one consented review after reviewing the potential credit charge. Do not create another research report solely to test the request shape.
