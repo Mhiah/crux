@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { RefsProvider, useTrace } from "./refs";
 import { ReppoReviewPanel } from "./reppo-review";
 import { claimsBehind, factCheckSummary, recordIds, refsIn, stripRefs } from "@/lib/plain";
@@ -76,7 +76,18 @@ function Bullets({ items }: { items: string[] }) {
   );
 }
 
-export function Progress({ project, active }: { project: ResearchProject | null; active: Stage | null }) {
+/**
+ * The review panel lives in the Answer view, which is hidden while another view is open, so
+ * the link asks the workstation to switch to Answer before scrolling to it.
+ */
+const SHOW_REVIEW = "crux:show-review";
+function showReview(event: MouseEvent<HTMLAnchorElement>) {
+  event.preventDefault();
+  window.dispatchEvent(new Event(SHOW_REVIEW));
+}
+
+/** `reviewable`: the report is saved on the server, so it can be sent for independent review. */
+export function Progress({ project, active, reviewable = false }: { project: ResearchProject | null; active: Stage | null; reviewable?: boolean }) {
   const done = new Set(project?.audit.map((a) => a.stage));
   return (
     <ol className="flex flex-wrap gap-2 text-sm" aria-label="Pipeline progress">
@@ -95,9 +106,9 @@ export function Progress({ project, active }: { project: ResearchProject | null;
           </li>
         );
       })}
-      {project?.status === "complete" && project.mode === "live" && (
+      {reviewable && project?.status === "complete" && project.mode === "live" && (
         <li>
-          <a href="#independent-review" className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-muted transition hover:border-foreground/40 hover:text-foreground">
+          <a href="#independent-review" onClick={showReview} className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-muted transition hover:border-foreground/40 hover:text-foreground">
             Independent review <span aria-hidden="true">→</span>
           </a>
         </li>
@@ -159,6 +170,16 @@ export function Workstation({ project, downloadable = true, reviewAvailable = tr
     if (next !== "evidence") setFocus(null);
     top.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+  useEffect(() => {
+    const open = () => {
+      setView("answer");
+      setFocus(null);
+      requestAnimationFrame(() => document.getElementById("independent-review")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    };
+    window.addEventListener(SHOW_REVIEW, open);
+    return () => window.removeEventListener(SHOW_REVIEW, open);
+  }, []);
+
   const known = recordIds(project);
   const nav: Nav = {
     project,

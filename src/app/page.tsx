@@ -170,7 +170,7 @@ export default function Home() {
         )}
 
         <div className="mt-6 space-y-2 print:hidden">
-          <Progress project={project} active={active} />
+          <Progress project={project} active={active} reviewable={saved && !running} />
           {running && activeLabel && <p className="text-sm text-muted">Working on {activeLabel.toLowerCase()}…</p>}
         </div>
 
