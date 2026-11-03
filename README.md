@@ -31,7 +31,7 @@ Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ
 
    About a minute in total, 6 SERV calls and 12 Tavily searches. The report is saved, so it can be reopened and reviewed later.
 4. Read the **Answer**, then open **Reasoning** and **Evidence**. Anything backed by facts has an **Evidence** link that opens just those facts.
-5. Open **Independent review**, the fourth tab (or the link after **What changed**), to send the report to Reppo and read its verdict.
+5. Click **Independent review**, the 7th step after **What changed**, to send the report to Reppo and read its verdict.
 6. Choose **Download** for the report as a PDF.
 
 ## The problem
@@ -86,7 +86,7 @@ Evidence links elsewhere in the report open this view filtered to the facts behi
 
 ### Independent review
 
-Crux's own stress test is SERV checking SERV. The **Independent review** tab sends the finished report to Reppo, whose evaluators judge the reasoning from outside, against five criteria:
+Crux's own stress test is SERV checking SERV. **Independent review**, the step after What changed, sends the finished report to Reppo, whose evaluators judge the reasoning from outside, against five criteria:
 
 1. Do the cited quotes support the report's key claims, without unsupported leaps?
 2. Does the stress test fairly address the strongest counter-evidence, risks and other explanations?
@@ -96,13 +96,13 @@ Crux's own stress test is SERV checking SERV. The **Independent review** tab sen
 
 How it works on a report:
 
-1. Open **Independent review**, enter the owner key, tick consent and choose **Request Reppo review**.
+1. Click **Independent review** in the steps at the top, enter the owner key, tick consent and choose **Request Reppo review**.
 2. Crux sends Reppo a compact trace of the report: the question, the thesis and its assumptions, the challenges, the re-evaluation, the conclusion, a balanced sample of facts with their quotes, and the source list.
 3. Reppo's evaluation takes at least 10 minutes. **Check for verdict** fetches it: accept, revise or reject, with a score, a confidence and a critique for each criterion. It's saved with the report.
 
 A verdict is independent feedback on the reasoning, not proof that every fact is correct.
 
-![The top of a report: the six stages, the Independent review link after What changed, and the Independent review tab](docs/screenshots/s2-report-after.png)
+![The top of a report: Research, Thesis, Stress test, Re-evaluate, Conclusion, What changed, then Independent review](docs/screenshots/s2-report-after.png)
 
 ### PDF report
 
@@ -133,13 +133,13 @@ Now that Crux is integrated with Reppo (Season 2), the report doesn't stop there
 
 **2. The top of a report**
 
-The first Crux ends at **What changed**, with three tabs:
+The first Crux ends at **What changed**:
 
-![The first Crux: the six stages ending at What changed, and the Answer, Reasoning and Evidence tabs](docs/screenshots/s2-report-before.png)
+![The first Crux: the six stages ending at What changed](docs/screenshots/s2-report-before.png)
 
-Crux with Reppo adds **Independent review** after What changed, and as a fourth tab:
+Crux with Reppo adds **Independent review** as the 7th step, right after What changed:
 
-![Crux with Reppo: the six stages, an Independent review link after What changed, and a fourth Independent review tab](docs/screenshots/s2-report-after.png)
+![Crux with Reppo: the six stages, then Independent review as the 7th step](docs/screenshots/s2-report-after.png)
 
 | | The first Crux | Crux with Reppo |
 | --- | --- | --- |
@@ -237,7 +237,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 - **The report screenshots** are from the fifth run, shown exactly as it came back. 3 of the 31 extracted facts were dropped because their quotes weren't in the source text (one rested on a Statista page whose figures sit behind a paywall), and 1 is flagged because it states a sample size its quote doesn't contain.
 - **Reppo, live.** The first evaluation request was accepted by Reppo and is awaiting its verdict. On the main site, the connection check reports Reppo connected (API key accepted) and Redis connected.
 - **Unit tests** (`npm test`, 89 tests): quote verification, figures in digits and words, source labels and selection, balanced queries, ID and dash stripping, prompt-guard retries, the switch to sample data when credits run out, the full pipeline end to end, and the Reppo request, response parsing and owner-only access.
-- **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap, and the Independent review link and tab from every view.
+- **The UI in a real browser** (headless Chromium): every view at 320, 360, 390 and 1200 px, light and dark, no sideways scrolling, PDF downloads, the demo question by arrow key and by tap, and the Independent review step from every view.
 - **Type check, lint and production build** are clean (`npm run typecheck`, `npm run lint`, `npm run build`), and GitHub Actions runs all four on every pull request to `main`, without live API calls.
 
 ## Run it locally
@@ -286,7 +286,7 @@ npm run build
 4. Redeploy (**Deployments → ⋯ → Redeploy**), because variables only apply to deployments made after they're added.
 5. Check it at `/reppo-connect`: enter the owner key, and it confirms Reppo and Redis without submitting anything.
 
-A run takes about a minute, and the research API allows up to 300 seconds. Without Redis, reports aren't saved and the Independent review tab stays hidden; use **Download** to keep a report. If SERV or Tavily credits run out, Crux shows the sample report instead, with a notice saying so.
+A run takes about a minute, and the research API allows up to 300 seconds. Without Redis, reports aren't saved and the Independent review step stays hidden; use **Download** to keep a report. If SERV or Tavily credits run out, Crux shows the sample report instead, with a notice saying so.
 
 ## Project layout
 
