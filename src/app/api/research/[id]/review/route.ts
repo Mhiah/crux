@@ -1,5 +1,6 @@
 import { loadProject, saveProject, storageAvailable, acquireReviewLock, releaseReviewLock } from "@/lib/store";
 import { submitReppo, getReppoReview } from "@/lib/reppo/client";
+import { authorizedReview } from "@/lib/reppo/access";
 import type { ReppoReview } from "@/lib/reppo/types";
 
 const reply = (data: unknown, status = 200) =>
@@ -10,6 +11,7 @@ const reviewEnabled = () => process.env.REPPO_REVIEW_ENABLED === "1" && Boolean(
 
 /** Explicit opt-in: submitted research may be viewed by members of Reppo's network. */
 export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/review">) {
+  if (!authorizedReview(req)) return reply({ error: "Review access denied." }, 403);
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null) as { consent?: unknown } | null;
   if (body?.consent !== true) return reply({ error: "Explicit consent is required." }, 400);
@@ -40,7 +42,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
 }
 
 /** User-triggered refresh; never block the original SERV research request. */
-export async function GET(_req: Request, ctx: RouteContext<"/api/research/[id]/review">) {
+export async function GET(req: Request, ctx: RouteContext<"/api/research/[id]/review">) {
+  if (!authorizedReview(req)) return reply({ error: "Review access denied." }, 403);
   const { id } = await ctx.params;
   const project = await loadProject(id).catch(() => null);
   if (!project) return reply({ error: "Report not found." }, 404);
