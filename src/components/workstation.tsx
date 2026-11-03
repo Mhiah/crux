@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { RefsProvider, useTrace } from "./refs";
-import { ReppoReviewPanel } from "./reppo-review";
+import { ReppoReviewPanel, reviewerLabel } from "./reppo-review";
 import { claimsBehind, factCheckSummary, recordIds, refsIn, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
 import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type CritiqueResponse, type ResearchProject, type Revision, type Source, type Stage } from "@/lib/types";
@@ -380,12 +380,12 @@ function RevisionView({ revision, conclusion }: { revision: Revision; conclusion
             <Card>
               <div className="flex flex-wrap items-center gap-2">
                 <Badge tone={RESPONSE_TONE[r.status]}>{human(r.status)}</Badge>
-                <span className="text-sm font-semibold">{r.dimension}</span>
+                <span className="text-sm font-semibold">{reviewerLabel(r.dimension)}</span>
               </div>
               <p className="mt-2 text-sm leading-relaxed text-muted">{r.critique}</p>
               <p className="mt-2 text-sm leading-relaxed">{plain(r.response)}</p>
               <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
-                <EvidenceLink label={r.dimension} ids={r.claim_ids} text={r.response} />
+                <EvidenceLink label={reviewerLabel(r.dimension)} ids={r.claim_ids} text={r.response} />
                 {r.research_query && <span className="text-xs text-muted">Searched: {r.research_query}</span>}
               </div>
             </Card>
