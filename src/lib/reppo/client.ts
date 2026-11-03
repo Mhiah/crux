@@ -23,7 +23,7 @@ function safeReason(body: unknown): string | undefined {
   const candidate = [value.message, value.error, error.message, value.detail]
     .find((item) => typeof item === "string");
   if (typeof candidate !== "string") return undefined;
-  const message = candidate.replace(/[\\r\\n\\t]/g, " ").trim();
+  const message = candidate.replace(/[\r\n\t]/g, " ").trim();
   if (!message || message.length > 180 || /authorization|bearer|api[_ -]?key|password|sk-[a-z0-9]/i.test(message)) return undefined;
   return message;
 }
