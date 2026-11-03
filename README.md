@@ -6,9 +6,9 @@ Crux uses SERV Reasoning to investigate a difficult business question, build a t
 
 **Crux becomes a research engine that can be independently challenged, correct its reasoning, and demonstrate what improved.**
 
-**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)** (Season 1: research, stress test, verified evidence, PDF brief)
+**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)** (research, stress test, verified evidence, PDF brief, and Independent review)
 
-> **Season 2 status:** independent review through Reppo is built and in a private pilot on the `feat/s2-reppo-review` Preview. The first evaluation was accepted by Reppo and is awaiting its verdict. Feedback-driven correction and measured improvement are next. See [Season 2](#season-2-independently-challenged-research) for exactly what works today and what is planned.
+> **Season 2 status:** independent review through Reppo is live on the main site as an owner-only pilot: saved reports show the **Independent review** link, and only the owner key can request a review. The first evaluation was accepted by Reppo and is awaiting its verdict. Feedback-driven correction and measured improvement are next. See [Season 2](#season-2-independently-challenged-research) for exactly what works today and what is planned.
 
 Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
@@ -316,7 +316,7 @@ Season 2 builds on SERV Reasoning V2 (no V3 Graph Sharding), and keeps the Crux 
 | Season 1: research, stress test, re-evaluation, verified evidence, audit trail, PDF | Live |
 | Reppo request with five criteria, a bounded trace (under 18 KB) and a no-charge size check | Built; first evaluation accepted by Reppo |
 | Owner-only review key, explicit consent, server-side keys, one request at a time per report | Built (pilot control, not user accounts) |
-| Saved reports in Redis so a review can be requested and checked later | Built on the Preview |
+| Saved reports in Redis (90 days) so a review can be requested and checked later | Live |
 | **Independent review** link after **What changed**, on live results and saved reports | Built |
 | Settled verdict retrieved and saved | Waiting for Reppo's verdict on the first evaluation |
 | Critique-driven correction, linked revisions, before/after metrics | Planned |
@@ -326,13 +326,13 @@ Season 2 builds on SERV Reasoning V2 (no V3 Graph Sharding), and keeps the Crux 
 
 - Reppo receives a compact text trace of the report (question, thesis, challenges, re-evaluation, conclusion, a balanced sample of facts with their quotes, and the source list), not the whole saved project. Reppo's evaluators may see it, so don't submit confidential research.
 - Each evaluation can use a Reppo credit. Reviews are off unless `REPPO_REVIEW_ENABLED=1`, need the private owner key, and need consent ticked every time. **Check request (no charge)** shows the request size and criteria without contacting Reppo, and `/reppo-connect` checks the Reppo key and Redis without submitting anything.
-- On the public production site no review section is shown, because production has no storage for reviews.
+- Visitors can see the Independent review section on saved reports, but only the owner key can request a review or check a verdict, so visitors can never spend credits.
 
 ### Architecture
 
 Next.js UI → NDJSON pipeline → SERV Reasoning stages + Tavily evidence → saved `ResearchProject` (Redis) → opt-in Reppo Evaluation API → saved evaluation ID, pending or settled verdict → (planned) targeted correction and versioned comparison. The review runs separately from the research, so it never slows down or blocks the original answer.
 
-Season 2 work happens on `feat/s2-reppo-review` with a Vercel Preview. Part of it is already merged into `main` (pull request #2); reviews stay off in production until the remaining work is finished and tested. Milestones are tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md), and the Reppo API is documented at [reppofoundation.org/evaluation-api](https://www.reppofoundation.org/evaluation-api).
+Season 2 is merged into `main` and runs on the main site; further Season 2 work continues on `feat/s2-reppo-review` with a Vercel Preview. Milestones are tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md), and the Reppo API is documented at [reppofoundation.org/evaluation-api](https://www.reppofoundation.org/evaluation-api).
 
 ## Known limitations
 

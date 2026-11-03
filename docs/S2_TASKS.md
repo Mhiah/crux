@@ -19,6 +19,7 @@
   - [x] Owner reports `REPPO_REVIEW_ENABLED=1` saved on the S2 Preview branch; deployment behavior still needs a live verification.
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
 - [ ] **S2-07** Live Reppo submission accepted after fixing the required `criteria` field; screenshot shows **Awaiting review**. **Next: retrieve settled verdict and confirm it persists.**
+- [x] **S2-07b** Production set up: Redis connected to Production, and `REPPO_API_KEY`, `CRUX_REVIEW_ACCESS_TOKEN` and `REPPO_REVIEW_ENABLED` added for Production (owner-confirmed). Season 2 merged into `main`.
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
 - [ ] **S2-10** Update README Season 2 positioning, preserve dashboard design, link **Independent review** directly after **What changed**, document real before/after screenshots. UI and documentation complete; later revision/result presentation remains pending.
