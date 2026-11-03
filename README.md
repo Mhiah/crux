@@ -1,6 +1,6 @@
 # Crux
 
-**The Research Engine That Challenges Its Own Conclusions—and Learns from Independent Criticism**
+**The Research Engine That Challenges Its Own Conclusions and Learns from Independent Criticism**
 
 **Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
 
