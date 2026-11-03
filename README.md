@@ -14,7 +14,7 @@ Crux is a research engine for hard market, business and strategy questions. Usin
 
 Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ) for every reasoning step and [Tavily](https://tavily.com) for web search.
 
-![The Crux home page](docs/screenshots/landing.png)
+![The Crux home page](docs/screenshots/s2-home-after.png)
 
 ## Try it in a few minutes
 
@@ -271,12 +271,24 @@ Season 1 made Crux argue with itself. Season 2 adds a critic from outside: the s
 
 ### Before and after Reppo
 
-| Before: the Season 1 dashboard | After: the Season 2 dashboard with Independent review |
-| --- | --- |
-| ![The Crux dashboard in Season 1: the answer, its confidence and what changed, from a live run](docs/screenshots/answer.png) | ![The Crux dashboard in Season 2 Preview: the Independent review section with a Reppo evaluation awaiting its verdict](docs/screenshots/s2-independent-review.png) |
-| SERV forms a thesis, stress tests it and re-judges it. All the criticism comes from inside Crux. | After **What changed**, an **Independent review** link opens the review section. With consent and the owner key, the report goes to Reppo, and its verdict and critiques appear here. |
+**1. The home page: the new tagline**
 
-Both images are real Crux screenshots. The **after** image shows the first live evaluation accepted and *Awaiting review*; it is not a finished verdict, and it doesn't show improved accuracy.
+| Before: Season 1 | After: Season 2 |
+| --- | --- |
+| ![Crux home page in Season 1: "AI research that stress tests its own conclusions."](docs/screenshots/s2-home-before.png) | ![Crux home page in Season 2: "Research that challenges itself."](docs/screenshots/s2-home-after.png) |
+| *AI research that stress tests its own conclusions.*<br>Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. | *Research that challenges itself.*<br>SERV Reasoning stress tests every answer. Reppo independently reviews it. |
+
+**2. The progress row: Independent review after What changed**
+
+| Before: Season 1 ends at What changed |
+| --- |
+| ![Season 1 progress row: Research, Thesis, Stress test, Re-evaluate, Conclusion, What changed](docs/screenshots/s2-progress-before.png) |
+
+| After: Season 2 adds Independent review |
+| --- |
+| ![Season 2 progress row: the same six stages, then an Independent review link](docs/screenshots/s2-progress-after.png) |
+
+In Season 1 all the criticism comes from inside Crux and the run ends at **What changed**. In Season 2, **Independent review** comes right after it: click it to open the review section, where the report can be sent to Reppo and its verdict and critiques appear. The link shows on finished live reports that are saved, so a review can be requested and checked later.
 
 ### How it works
 

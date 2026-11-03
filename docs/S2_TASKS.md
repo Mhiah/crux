@@ -26,7 +26,8 @@
   - [x] The link switches to the Answer view before scrolling, so it works from the Reasoning and Evidence tabs.
   - [x] The review section and link are hidden where reviews are impossible (no storage), so production no longer shows "This report was not saved on the server".
   - [x] README reworked: Season 2 positioning at the top, accurate status table, data/consent/cost, setup variables, project layout.
-  - [ ] Replace the degraded `s2-independent-review.png` (4 colours, text cut off) with a clean full screenshot of the Preview dashboard.
+  - [x] Home page rewritten for Season 2: "Research that challenges itself." with "SERV Reasoning stress tests every answer. Reppo independently reviews it."
+  - [x] README before/after uses two clean pairs: the home page (old vs new tagline) and the progress row (ending at What changed vs adding Independent review). The degraded `s2-independent-review.png` was removed.
 - [ ] **S2-11** Complete regression, live end-to-end tests, demo, review and merge.
 
 ## Current task
