@@ -31,7 +31,7 @@ Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ
 
    About a minute in total, 6 SERV calls and 12 Tavily searches. The report is saved, so it can be reopened and reviewed later.
 4. Read the **Answer**, then open **Reasoning** and **Evidence**. Anything backed by facts has an **Evidence** link that opens just those facts.
-5. Click **Independent review**, the 7th step after **What changed**, to send the report to Reppo and read its verdict.
+5. Click **Independent review**, the step after **What changed**, to send the report to Reppo and read its verdict.
 6. Choose **Download** for the report as a PDF.
 
 ## The problem
@@ -137,9 +137,9 @@ The first Crux ends at **What changed**:
 
 ![The first Crux: the six stages ending at What changed](docs/screenshots/s2-report-before.png)
 
-Crux with Reppo adds **Independent review** as the 7th step, right after What changed:
+Crux with Reppo adds **Independent review** as the next step, right after What changed:
 
-![Crux with Reppo: the six stages, then Independent review as the 7th step](docs/screenshots/s2-report-after.png)
+![Crux with Reppo: the six stages, then Independent review](docs/screenshots/s2-report-after.png)
 
 | | The first Crux | Crux with Reppo |
 | --- | --- | --- |

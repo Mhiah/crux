@@ -117,7 +117,7 @@ export function Progress({ project, active, reviewable = false }: { project: Res
                 : "border-foreground/30 text-foreground hover:border-foreground/60"
             }`}
           >
-            <span className="font-mono text-xs">{project.reppo?.status === "settled" ? "✓" : STAGES.length + 1}</span>
+            {project.reppo?.status === "settled" && <span className="font-mono text-xs">✓</span>}
             Independent review
           </a>
         </li>

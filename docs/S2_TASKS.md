@@ -28,9 +28,9 @@
   - [x] The review section and link are hidden where reviews are impossible (no storage), so production no longer shows "This report was not saved on the server".
   - [x] README reworked: Season 2 positioning at the top, accurate status table, data/consent/cost, setup variables, project layout.
   - [x] Home page rewritten for Season 2: "Research that challenges itself." with "SERV Reasoning stress tests every answer. Reppo independently reviews it."
-  - [x] Independent review is the 7th step in the progress row, right after What changed, in the same style (✓ once the verdict is settled). Clicking it opens the review section at the end of the Answer view.
+  - [x] Independent review is the step after What changed in the progress row, right after What changed, in the same style (✓ once the verdict is settled). Clicking it opens the review section at the end of the Answer view.
   - [x] Removed the "Check request (no charge)" button now that submission works.
-  - [x] README before/after uses two clean pairs: the home page (old vs new tagline) and the top of a report (ending at What changed vs adding Independent review as the 7th step). The degraded `s2-independent-review.png` was removed.
+  - [x] README before/after uses two clean pairs: the home page (old vs new tagline) and the top of a report (ending at What changed vs adding Independent review as the next step). The degraded `s2-independent-review.png` was removed.
 - [ ] **S2-11** Complete regression, live end-to-end tests, demo, review and merge.
 
 ## Current task
