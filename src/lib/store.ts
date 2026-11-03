@@ -2,34 +2,67 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { ResearchProject } from "./types";
 
-/**
- * Saves runs as JSON files on the machine running the app, so they reopen at /research/:id.
- * Callers only depend on saveProject/loadProject.
- */
-
-/**
- * Vercel's functions can't keep files between requests, so runs aren't saved there (unless
- * CRUX_DATA_DIR points somewhere writable); reports are kept by downloading the PDF.
- */
-export const storageAvailable = !process.env.VERCEL || Boolean(process.env.CRUX_DATA_DIR);
-
+/** Local JSON in development; optional durable Upstash Redis REST for Vercel. */
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+const useRedis = Boolean(redisUrl && redisToken);
+export const storageAvailable = useRedis || !process.env.VERCEL || Boolean(process.env.CRUX_DATA_DIR);
 const DATA_DIR = process.env.CRUX_DATA_DIR || path.join(process.cwd(), ".data", "projects");
+const localLocks = new Set<string>();
+function valid(id: string): string {
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid project ID.");
+  return id;
+}
+const file = (id: string) => path.join(DATA_DIR, valid(id) + ".json");
+const key = (id: string) => "crux:s2:project:" + valid(id);
 
-const fileFor = (id: string) => {
-  if (!/^[0-9a-f-]{36}$/.test(id)) throw new Error("Invalid project id.");
-  return path.join(DATA_DIR, `${id}.json`);
-};
-
-export async function saveProject(project: ResearchProject): Promise<void> {
-  await mkdir(DATA_DIR, { recursive: true });
-  await writeFile(fileFor(project.id), JSON.stringify(project, null, 2));
+async function redis<T>(args: Array<string | number>): Promise<T> {
+  if (!redisUrl || !redisToken) throw new Error("Redis not configured.");
+  const response = await fetch(redisUrl, {
+    method: "POST",
+    headers: { Authorization: "Bearer " + redisToken, "Content-Type": "application/json" },
+    body: JSON.stringify(args),
+    cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error("Storage returned HTTP " + response.status);
+  const body = await response.json() as { result?: T; error?: string };
+  if (body.error) throw new Error(body.error);
+  return body.result as T;
 }
 
-export async function loadProject(id: string): Promise<ResearchProject | null> {
-  try {
-    return JSON.parse(await readFile(fileFor(id), "utf8")) as ResearchProject;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
+export async function saveProject(project: ResearchProject): Promise<void> {
+  if (useRedis) {
+    await redis(["SET", key(project.id), JSON.stringify(project), "EX", 90 * 24 * 60 * 60]);
+    return;
   }
+  await mkdir(DATA_DIR, { recursive: true });
+  await writeFile(file(project.id), JSON.stringify(project, null, 2));
+}
+export async function loadProject(id: string): Promise<ResearchProject | null> {
+  if (useRedis) {
+    const content = await redis<string | null>(["GET", key(id)]);
+    return content ? JSON.parse(content) as ResearchProject : null;
+  }
+  try { return JSON.parse(await readFile(file(id), "utf8")) as ResearchProject; }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
+  }
+}
+
+/** Guard against two submits for the same run. Global limits still apply at Reppo. */
+export async function acquireReviewLock(id: string): Promise<boolean> {
+  valid(id);
+  if (useRedis) {
+    return (await redis<string | null>(["SET", "crux:s2:reviewlock:" + id, "busy", "NX", "EX", 90])) === "OK";
+  }
+  if (localLocks.has(id)) return false;
+  localLocks.add(id);
+  return true;
+}
+export async function releaseReviewLock(id: string): Promise<void> {
+  valid(id);
+  if (useRedis) await redis(["DEL", "crux:s2:reviewlock:" + id]);
+  else localLocks.delete(id);
 }

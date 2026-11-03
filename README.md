@@ -237,6 +237,16 @@ tests/                        Vitest unit tests
 docs/screenshots/             The images in this README
 ```
 
+## Season 2 (development branch): Reppo independent review
+
+This branch preserves the Season 1 SERV Reasoning V2 research pipeline, citation checks, and PDF export, while adding optional independent evaluation through Reppo. There is no native SERV V3 Graph Sharding.
+
+A completed live report can be submitted after explicit user consent to share a compact evidence trace with Reppo. The original report returns immediately; users can check for a verdict after the evaluation window (minimum 10 minutes). Reppo assessments are independent critiques, not factual guarantees. Automated SERV feedback-driven corrections are planned but are **not yet implemented**.
+
+Set `REPPO_API_KEY` in your server environment and explicitly enable `REPPO_REVIEW_ENABLED=1` for evaluation submissions. Never add these secrets to Git. Live submissions can consume evaluation credits; do not enable the public endpoint without suitable authentication and usage controls. On Vercel, add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` for durable report and evaluation storage; otherwise the review action is unavailable. For local development, reports are saved as JSON. Reppo submissions may be accessible to signed-in network participants, so the user is asked to opt in and to avoid confidential information.
+
+Validate with `npm test`, `npm run typecheck`, `npm run lint`, and `npm run build`. The Reppo tests use mocked HTTP calls and do not spend credits. No live Reppo evaluation has been run yet.
+
 ## Known limitations
 
 - **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.

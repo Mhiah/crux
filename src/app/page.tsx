@@ -187,7 +187,7 @@ export default function Home() {
 
         {project && (
           <div className="mt-8">
-            <Workstation project={project} downloadable={!running} />
+            <Workstation project={project} downloadable={!running} reviewAvailable={saved && !running} />
           </div>
         )}
       </main>
