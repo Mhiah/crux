@@ -44,7 +44,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
       console.error("Reppo rejected request:", { status: error.status, reason: error.reason ?? "No detail provided" });
       return reply({
         error: "Reppo returned HTTP " + error.status +
-          (error.reason ? ": " + error.reason : ".": ". See runtime logs."),
+          (error.reason ? ": " + error.reason : ". See runtime logs."),
       }, 502);
     }
     console.error("Reppo submission failed:", error instanceof Error ? error.message : "Unexpected error");
