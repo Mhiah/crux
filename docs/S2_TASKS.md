@@ -15,9 +15,9 @@
   - [x] Owner confirmed `CRUX_REVIEW_ACCESS_TOKEN` saved for S2 Preview (value not verified).
   - [x] Owner installed Redis integration; Vercel screenshot shows `KV_REST_API_URL` and `KV_REST_API_TOKEN` in Preview.
   - [x] Added support for this native Vercel KV REST variable pair in Crux.
-  - [ ] Verify effective Redis connectivity on the new Preview deployment and confirm `REPPO_API_KEY` is set.
+  - [x] Screenshot of S2 Preview `/reppo-connect`: Reppo authenticated (HTTP 200); Redis PING succeeded. No evaluation submitted.
   - [ ] Enable `REPPO_REVIEW_ENABLED=1` only when secure evaluation testing is ready.
-- [ ] **S2-06** Execute non-billable authenticated Reppo connection check (from `/reppo-connect` in the S2 Preview, or `npm run reppo:check` locally) and record HTTP status only.
+- [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
 - [ ] **S2-07** With the owner's approval, submit one non-sensitive live report, retrieve the settled verdict and verify persistence, error handling and rate limits.
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
@@ -26,11 +26,11 @@
 
 ## Current task
 
-**S2-05** — Open the S2 Preview `/reppo-connect` page, enter the private owner access key, and verify Reppo authentication plus Redis PING. Keep live evaluation submissions disabled.
+**S2-05 / S2-07 preparation** — Connection verified. Next, confirm the evaluation submission protections and enable `REPPO_REVIEW_ENABLED=1` on the S2 Preview branch only; redeploy, then run one explicitly approved non-sensitive evaluation to validate the full submit/settle/read flow.
 
 ## Next user-owned setup step
 
-Configure credentials and storage privately in Vercel **Preview**, not here in chat. The auth key is a separate 24+ character random secret. `REPPO_API_KEY` stays server-side. Public submission must remain disabled until rate limiting, durable storage and per-user billing safeguards are added.
+Credentials and Redis connectivity have been verified on S2 Preview without exposing secrets. The remaining flag `REPPO_REVIEW_ENABLED=1` is **not yet confirmed**. Keep evaluation submissions disabled until a controlled test is approved. In Vercel, scope the flag to Preview and branch `feat/s2-reppo-review`; new environment variables take effect with a new deployment. Never paste secret values into chat.
 
 ## Testing notes
 
