@@ -17,7 +17,7 @@
   - [x] Added support for this native Vercel KV REST variable pair in Crux.
   - [ ] Verify effective Redis connectivity on the new Preview deployment and confirm `REPPO_API_KEY` is set.
   - [ ] Enable `REPPO_REVIEW_ENABLED=1` only when secure evaluation testing is ready.
-- [ ] **S2-06** Execute non-billable authenticated Reppo connection check (`npm run reppo:check`) and record HTTP status only.
+- [ ] **S2-06** Execute non-billable authenticated Reppo connection check (from `/reppo-connect` in the S2 Preview, or `npm run reppo:check` locally) and record HTTP status only.
 - [ ] **S2-07** With the owner's approval, submit one non-sensitive live report, retrieve the settled verdict and verify persistence, error handling and rate limits.
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
@@ -26,7 +26,7 @@
 
 ## Current task
 
-**S2-05** — Validate the new KV REST variable mapping in Vercel Preview, then run authenticated non-billable Reppo connectivity check. Keep live evaluation submissions disabled.
+**S2-05** — Open the S2 Preview `/reppo-connect` page, enter the private owner access key, and verify Reppo authentication plus Redis PING. Keep live evaluation submissions disabled.
 
 ## Next user-owned setup step
 

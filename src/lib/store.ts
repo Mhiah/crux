@@ -75,3 +75,14 @@ export async function releaseReviewLock(id: string): Promise<void> {
   if (useRedis) await redis(["DEL", "crux:s2:reviewlock:" + id]);
   else localLocks.delete(id);
 }
+
+
+/** Read-only Redis health probe: PING uses no project data and writes no keys. */
+export async function checkStorageConnection(): Promise<"connected" | "missing" | "unreachable"> {
+  if (!useRedis) return "missing";
+  try {
+    return (await redis<string>(["PING"])) === "PONG" ? "connected" : "unreachable";
+  } catch {
+    return "unreachable";
+  }
+}
