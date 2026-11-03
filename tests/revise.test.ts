@@ -121,3 +121,14 @@ describe("improving a report with its review", () => {
     await expect(reviseWithFeedback({ ...original, reppo: undefined }, { reasoning: reviser(), search: searchWith([newSource]) })).rejects.toThrow();
   });
 });
+
+describe("follow-up source quality", () => {
+  it("leaves out company blogs when research, official, industry or news sources were found", async () => {
+    const original = await reviewedReport();
+    const blog = { ...newSource, url: "https://someblog.example.com/crypto-stats", title: "Crypto stats" };
+    const study = { ...newSource, url: "https://www.sciencedirect.com/science/article/x", title: "A study" };
+    const revised = await reviseWithFeedback(original, { reasoning: reviser(), search: searchWith([blog, study]) });
+    const added = revised.research!.sources.filter((s) => revised.revision!.new_source_ids.includes(s.id));
+    expect(added.map((s) => s.kind)).toEqual(["research"]);
+  });
+});

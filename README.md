@@ -81,6 +81,10 @@ How it works on a report:
 
 A verdict is independent feedback on the reasoning, not proof that every fact is correct.
 
+Reppo's real verdict on the demo question: revise, 65 out of 100, with a written critique from each of three reviewers. All three said the same thing in different words: the report leaned on what businesses say they would do rather than what they actually do, and on figures that weren't verified.
+
+![Reppo's verdict on the demo question: revise, 65/100, high confidence, and critiques from three reviewers](docs/screenshots/s2-review-verdict.png)
+
 ### Learning from the critique
 
 When the verdict is in, **Improve with this feedback** closes the loop:
@@ -91,6 +95,16 @@ When the verdict is in, **Improve with this feedback** closes the loop:
 4. The improved report is saved as a new report, linked to the original, which stays exactly as it was. Its **After independent review** section shows the answer before and after, each critique and what was done about it, what changed, and a **What improved** table (facts, facts against, research and official sources, flagged figures, confidence) counted in code from the two reports, not estimated by the model.
 
 The improved report can be sent for its own independent review, so the cycle can repeat.
+
+On the demo question, Crux ran one focused search per reviewer, aimed at verified acceptance rates, actual adoption and the counter-evidence. It answered all three critiques. Instead of rewording the answer to please the reviewers, it narrowed the claim to conditional openness, separated stated willingness from actual adoption, and lowered its own confidence from medium to low:
+
+![After independent review: the answer before and after the review, with confidence lowered from medium to low](docs/screenshots/s2-after-review.png)
+
+The evidence behind it grew, and the counts come straight from the two reports:
+
+![What improved: facts 29 to 56, facts against 9 to 16, research, official and industry sources 7 to 11, confidence medium to low](docs/screenshots/s2-what-improved.png)
+
+Two of the extra flagged figures in this run were a small bug, since fixed: a fact that mentioned its source's label (S24) had the 24 counted as a figure. Follow-up searches now also leave out company sites and blogs whenever research, official, industry or news sources are found.
 
 **Who can request a review, and what it costs.** Each review can use a Reppo credit, and each improvement uses SERV and Tavily credits, so only the owner key can request either, consent must be ticked every time, a report can only be submitted once, and reviews are off unless `REPPO_REVIEW_ENABLED=1`. Reppo's evaluators may see the submitted trace, so don't submit confidential research.
 
@@ -225,7 +239,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 
 Independent review and learning from it are built. Next:
 
-1. **Run the full loop live.** The first live review is waiting for Reppo's verdict; once it arrives, improve that report and send the improved one for its own review, to compare Reppo's two assessments.
+1. **Review the improved report.** Send the improved demo report for its own independent review, and compare Reppo's two scores.
 2. **Reppo's verdict and the improvement in the PDF report.**
 3. **User accounts,** so reviews and improvements aren't limited to one owner key.
 
@@ -233,9 +247,9 @@ Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
 ## What was checked
 
-- **Reppo, live.** The first review request was accepted by Reppo. On the main site, the connection check reports Reppo connected (API key accepted) and Redis connected.
+- **The full loop, live.** On the demo question, Reppo returned revise, 65/100, with three critiques; Crux improved the report from them (27 new facts from 10 new sources, facts against 9 to 16, confidence medium to low) and saved it as a new report linked to the original. On the main site, the connection check reports Reppo and Redis connected.
 - **Live research runs** with SERV and Tavily on the demo question: the case against is found (6 to 9 facts against per run), and research, official and industry sources make up most of the 20 sources.
-- **Unit tests** (`npm test`, 94 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
+- **Unit tests** (`npm test`, 100 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
 - **In a real browser** (headless Chromium): every view from 320 px phones to desktop, light and dark, PDF downloads, and the Independent review step from every view.
 - **Type check, lint and production build** are clean, and GitHub Actions runs them on every pull request to `main`, without live API calls.
 
@@ -317,7 +331,7 @@ docs/S2_TASKS.md              Task tracker
 ## Known limitations
 
 - **Independent review is owner-only.** There are no user accounts yet, so one owner key controls reviews, and each review can use a Reppo credit.
-- **Learning from the critique hasn't run live yet.** It's built and tested with sample critiques; the first live run waits for Reppo's first verdict. Each report is improved once, from up to five critiques.
+- **One improvement per report.** Each report is improved once, from up to five critiques; to go further, review the improved report and improve that.
 - **The PDF doesn't include the Reppo verdict yet.**
 - **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.
 - **Judgement calls.** A fact's stance and the type of an unrecognised source come from the model.

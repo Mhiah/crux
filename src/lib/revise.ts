@@ -112,6 +112,7 @@ export async function reviseWithFeedback(
     maxSources: MAX_NEW_SOURCES,
     focus: `This is follow-up research on an independent review's critiques of an existing report:\n${formatCritiques(critiques)}\nExtract the facts that bear on these critiques.`,
     allowEmpty: true,
+    preferStrong: true,
   });
   warnings.push(...found.warnings);
   const merged: Research = {

@@ -32,6 +32,8 @@ export type CollectOptions = {
   focus?: string;
   /** Finding nothing new is a result, not an error. */
   allowEmpty?: boolean;
+  /** Keep only research, official, industry, news and reference sources when any are found. */
+  preferStrong?: boolean;
 };
 
 type RawClaim = Pick<Claim, "text" | "category" | "stance" | "quotes">;
@@ -158,6 +160,14 @@ export async function collectResearch(
       };
     });
   });
+  // Follow-up research answers critiques about verification, so company pages, blogs and
+  // social posts are left out whenever better sources were found.
+  if (options.preferStrong) {
+    const strong = perQuery.map((list) => list.filter((s) => sourceRank(s.kind) <= 1));
+    if (strong.some((l) => l.length > 0)) perQuery.splice(0, perQuery.length, ...strong);
+    else warnings.push("The follow-up searches found only company sites, blogs or social posts.");
+  }
+
   if (perQuery.every((l) => l.length === 0)) {
     if (options.allowEmpty) {
       warnings.push("The follow-up searches found no sources the report doesn't already use.");

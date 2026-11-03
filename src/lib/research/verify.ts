@@ -62,8 +62,10 @@ function spelledNumbersToDigits(text: string): string {
  * With `spelled`, number words count too ("thirty-three" → "33").
  */
 export function numbersIn(text: string, { spelled = false } = {}): Set<string> {
+  // Crux's own record labels (S24, C12) aren't figures, even when a model writes one into a fact.
+  const withoutIds = text.replace(/\b[SCAX]\d{1,3}\b/g, " ");
   return new Set(
-    [...(spelled ? spelledNumbersToDigits(text) : text).matchAll(/\d+(?:[.,]\d+)*/g)].map((m) => m[0].replace(/,(?=\d{3}\b)/g, "").replace(/\.0+$/, "")),
+    [...(spelled ? spelledNumbersToDigits(withoutIds) : withoutIds).matchAll(/\d+(?:[.,]\d+)*/g)].map((m) => m[0].replace(/,(?=\d{3}\b)/g, "").replace(/\.0+$/, "")),
   );
 }
 

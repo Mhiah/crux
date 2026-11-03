@@ -49,3 +49,10 @@ describe("figures written as words", () => {
     expect(unmatchedNumbers("One of the largest markets", ["the largest market"])).toEqual([]);
   });
 });
+
+describe("record labels are not figures", () => {
+  it("ignores S24 or C12 written into a fact", () => {
+    expect(unmatchedNumbers("The study in S24 surveyed 402 nonusers.", ["surveyed 402 nonusers"])).toEqual([]);
+    expect(unmatchedNumbers("As C12 shows, 41% would pay.", ["40% would pay"])).toEqual(["41"]);
+  });
+});
