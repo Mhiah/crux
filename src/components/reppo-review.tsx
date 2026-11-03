@@ -50,7 +50,8 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
     finally { setBusy(false); }
   }
 
-  if (project.mode !== "live" || project.status !== "complete") return null;
+  // Without server storage (e.g. production) a review can't be requested, so show nothing.
+  if (project.mode !== "live" || project.status !== "complete" || (!available && !review)) return null;
 
   async function submit() {
     if (!consent || !available) return;
