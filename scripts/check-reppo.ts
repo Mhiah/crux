@@ -1,3 +1,5 @@
+export {};
+
 /** A safe authenticated Reppo connectivity check: GET only, never submits evaluation jobs. */
 const key = process.env.REPPO_API_KEY?.trim();
 if (!key) {
