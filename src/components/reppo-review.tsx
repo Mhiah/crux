@@ -65,6 +65,12 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
           {review.decision && <p><strong>Decision:</strong> {review.decision}{review.score !== undefined ? " · score " + review.score + "/100" : ""}{review.confidence ? " · " + review.confidence + " confidence" : ""}</p>}
           {review.route && <p><strong>Suggested action:</strong> {review.route}</p>}
           {review.critiques.map((c, i) => <div key={i} className="border-t border-line pt-2"><strong>{c.dimension}</strong><p className="mt-1 text-muted">{c.critique}</p></div>)}
+          {review.status === "pending" && review.checked_at && (
+            <p className="text-muted" role="status">
+              Last checked {new Date(review.checked_at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+              {review.reppo_status ? `. Reppo says: ${review.reppo_status}` : ""}. No verdict yet; Reppo&apos;s evaluators can take longer than 10 minutes, so check again later.
+            </p>
+          )}
           {review.status === "pending" && <button type="button" className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-50" disabled={busy || !accessToken.trim()} onClick={() => void refresh()}>{busy ? "Checking…" : "Check for verdict"}</button>}
         </div>
       ) : (

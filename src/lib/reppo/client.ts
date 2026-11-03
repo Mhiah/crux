@@ -58,7 +58,9 @@ export function normalizeReppoResponse(body: Record<string, unknown>, previous: 
   const data = Object.keys(obj(body.data)).length ? obj(body.data) : body;
   const verdict = obj(data.verdict);
   const action = obj(data.action);
-  const choice = str(verdict.decision)?.toLowerCase();
+  // Reppo's documented shape is verdict.decision; also accept a decision at the top level.
+  const choice = (str(verdict.decision) ?? str(data.decision))?.toLowerCase();
+  const reppoStatus = (str(data.status) ?? str(data.state))?.slice(0, 40);
   const decision = (["accept", "revise", "reject"] as const).find((x) => x === choice) as ReppoDecision | undefined;
   const confidence = (["low", "medium", "high"] as const).find((x) => x === str(verdict.confidence)?.toLowerCase());
   const critiques = (Array.isArray(data.verdicts) ? data.verdicts : []).map(obj).map((v, index) => ({
@@ -78,10 +80,18 @@ export function normalizeReppoResponse(body: Record<string, unknown>, previous: 
     ...(str(action.route) ? { route: str(action.route) } : {}),
     critiques: critiques.length ? critiques : previous.critiques,
     ...(num(data.peerAssessmentCount) !== undefined ? { peer_assessment_count: num(data.peerAssessmentCount) } : {}),
+    ...(reppoStatus ? { reppo_status: reppoStatus } : {}),
   };
 }
 
 export async function getReppoReview(previous: ReppoReview, key: string, transport: Fetcher = fetch): Promise<ReppoReview> {
   const response = await send("/" + encodeURIComponent(previous.eval_id), key, {}, transport);
+  // Field names and status only, never the review's contents, so an unexpected shape can be diagnosed.
+  const data = Object.keys(obj(response.data)).length ? obj(response.data) : response;
+  console.info("Reppo verdict check:", {
+    keys: Object.keys(data).slice(0, 20),
+    verdict_keys: Object.keys(obj(data.verdict)).slice(0, 20),
+    status: str(data.status) ?? str(data.state) ?? null,
+  });
   return normalizeReppoResponse(response, previous);
 }

@@ -67,3 +67,15 @@ describe("S2 independent evaluation", () => {
     expect(settled.critiques[0].critique).toMatch(/primary sources/);
   });
 });
+
+describe("verdict checks", () => {
+  const pending: ReppoReview = { eval_id: "eval_1234", submitted_at: "2026-11-03T00:00:00Z", status: "pending", critiques: [] };
+  it("keeps Reppo's own status so a slow review is visible", () => {
+    const checked = normalizeReppoResponse({ data: { status: "in_review" } }, pending);
+    expect(checked).toMatchObject({ status: "pending", reppo_status: "in_review" });
+    expect(checked.checked_at).toBeTruthy();
+  });
+  it("accepts a decision at the top level as well as under verdict", () => {
+    expect(normalizeReppoResponse({ status: "settled", decision: "Accept", score: 80 }, pending)).toMatchObject({ status: "settled", decision: "accept" });
+  });
+});

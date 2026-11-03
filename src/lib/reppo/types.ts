@@ -11,4 +11,6 @@ export type ReppoReview = {
   route?: string;
   critiques: { dimension: string; critique: string; score?: number }[];
   peer_assessment_count?: number;
+  /** Reppo's own status word from the last check (e.g. "pending"), shown so a slow review is visible. */
+  reppo_status?: string;
 };
