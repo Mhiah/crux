@@ -8,7 +8,7 @@ Crux uses SERV Reasoning to investigate a difficult business question, build a t
 
 **Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)** (research, stress test, verified evidence, PDF brief, and Independent review)
 
-> **Season 2 status:** independent review through Reppo is live on the main site as an owner-only pilot: saved reports show the **Independent review** link, and only the owner key can request a review. The first evaluation was accepted by Reppo and is awaiting its verdict. Feedback-driven correction and measured improvement are next. See [Season 2](#season-2-independently-challenged-research) for exactly what works today and what is planned.
+> **Season 2 status:** independent review through Reppo is live on the main site as an owner-only pilot: saved reports have an **Independent review** tab (and a link after What changed), and only the owner key can request a review. The first evaluation was accepted by Reppo and is awaiting its verdict. Feedback-driven correction and measured improvement are next. See [Season 2](#season-2-independently-challenged-research) for exactly what works today and what is planned.
 
 Crux is a research engine for hard market, business and strategy questions. Using SERV Reasoning, it forms a thesis, stress tests it against the evidence and audits it. Instead of searching for support and writing a confident report, it commits to a first answer, looks hard for what would make that answer wrong, re-judges it, and shows you exactly what changed and why. Every fact it uses is matched to the exact words in its source.
 
@@ -278,24 +278,24 @@ Season 1 made Crux argue with itself. Season 2 adds a critic from outside: the s
 | ![Crux home page in Season 1: "AI research that stress tests its own conclusions."](docs/screenshots/s2-home-before.png) | ![Crux home page in Season 2: "Research that challenges itself."](docs/screenshots/s2-home-after.png) |
 | *AI research that stress tests its own conclusions.*<br>Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. | *Research that challenges itself.*<br>SERV Reasoning stress tests every answer. Reppo independently reviews it. |
 
-**2. The progress row: Independent review after What changed**
+**2. The top of a report: Independent review after What changed, and its own tab**
 
-| Before: Season 1 ends at What changed |
+| Before: Season 1 ends at What changed, with three tabs |
 | --- |
-| ![Season 1 progress row: Research, Thesis, Stress test, Re-evaluate, Conclusion, What changed](docs/screenshots/s2-progress-before.png) |
+| ![Season 1 report top: the six stages ending at What changed, and the Answer, Reasoning and Evidence tabs](docs/screenshots/s2-report-before.png) |
 
 | After: Season 2 adds Independent review |
 | --- |
-| ![Season 2 progress row: the same six stages, then an Independent review link](docs/screenshots/s2-progress-after.png) |
+| ![Season 2 report top: the six stages, an Independent review link after What changed, and a fourth Independent review tab](docs/screenshots/s2-report-after.png) |
 
-In Season 1 all the criticism comes from inside Crux and the run ends at **What changed**. In Season 2, **Independent review** comes right after it: click it to open the review section, where the report can be sent to Reppo and its verdict and critiques appear. The link shows on finished live reports that are saved, so a review can be requested and checked later.
+In Season 1 all the criticism comes from inside Crux and the run ends at **What changed**. In Season 2, **Independent review** comes right after it, and is also a tab next to Answer, Reasoning and Evidence. Both open the review: the report is sent to Reppo, and its verdict and critiques appear there. It shows on finished live reports that are saved, so a review can be requested and checked later.
 
 ### How it works
 
 1. **Research.** SERV plans balanced searches (half look for evidence against the answer), Tavily runs them, and Crux checks every quote against its source.
 2. **Thesis and stress test.** SERV commits to a first answer, then challenges it: weak assumptions, contradicting evidence, other explanations, risks and missing evidence.
 3. **Re-evaluate and conclude.** Every assumption gets a verdict, and **What changed** shows how the answer moved. The six Season 1 stages are unchanged.
-4. **Independent review (built).** After **What changed**, the **Independent review** link opens the review section. The owner enters the private review key, ticks consent, and Crux sends Reppo a compact, source-linked trace of the report with five criteria:
+4. **Independent review (built).** Open the **Independent review** tab, or click the link after **What changed**. The owner enters the private review key, ticks consent, and Crux sends Reppo a compact, source-linked trace of the report with five criteria:
    - Do the cited quotes support the key claims?
    - Does the stress test fairly address the strongest counter-evidence?
    - Does the conclusion follow from the evidence, challenges and re-evaluation?
@@ -317,7 +317,7 @@ Season 2 builds on SERV Reasoning V2 (no V3 Graph Sharding), and keeps the Crux 
 | Reppo request with five criteria, a bounded trace (under 18 KB) and a no-charge size check | Built; first evaluation accepted by Reppo |
 | Owner-only review key, explicit consent, server-side keys, one request at a time per report | Built (pilot control, not user accounts) |
 | Saved reports in Redis (90 days) so a review can be requested and checked later | Live |
-| **Independent review** link after **What changed**, on live results and saved reports | Built |
+| **Independent review** tab, and a link after **What changed**, on live results and saved reports | Built |
 | Settled verdict retrieved and saved | Waiting for Reppo's verdict on the first evaluation |
 | Critique-driven correction, linked revisions, before/after metrics | Planned |
 | User accounts, quotas and cost limits for public reviews | Planned |
@@ -325,7 +325,7 @@ Season 2 builds on SERV Reasoning V2 (no V3 Graph Sharding), and keeps the Crux 
 ### Data, consent and cost
 
 - Reppo receives a compact text trace of the report (question, thesis, challenges, re-evaluation, conclusion, a balanced sample of facts with their quotes, and the source list), not the whole saved project. Reppo's evaluators may see it, so don't submit confidential research.
-- Each evaluation can use a Reppo credit. Reviews are off unless `REPPO_REVIEW_ENABLED=1`, need the private owner key, and need consent ticked every time. **Check request (no charge)** shows the request size and criteria without contacting Reppo, and `/reppo-connect` checks the Reppo key and Redis without submitting anything.
+- Each evaluation can use a Reppo credit. Reviews are off unless `REPPO_REVIEW_ENABLED=1`, need the private owner key, and need consent ticked every time. `/reppo-connect` checks the Reppo key and Redis without submitting anything.
 - Visitors can see the Independent review section on saved reports, but only the owner key can request a review or check a verdict, so visitors can never spend credits.
 
 ### Architecture
