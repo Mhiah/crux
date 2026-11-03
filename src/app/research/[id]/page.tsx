@@ -26,6 +26,20 @@ export default async function ResearchPage(props: PageProps<"/research/[id]">) {
           {new Date(project.created_at).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" })} UTC
           {project.mode === "mock" && " · mock run (illustrative fixtures)"}
         </p>
+        {project.revision && (
+          <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm print:hidden">
+            Improved after independent review.{" "}
+            <a href={`/research/${project.revision.of}`} className="text-info underline underline-offset-2">See the original report</a>
+            {" · "}
+            <a href="#after-review" className="text-info underline underline-offset-2">What the review changed</a>
+          </p>
+        )}
+        {!project.revision && project.revisions?.length ? (
+          <p className="mt-3 rounded-lg bg-surface px-3 py-2 text-sm print:hidden">
+            This report has been improved after its independent review.{" "}
+            <a href={`/research/${project.revisions.at(-1)}#after-review`} className="text-info underline underline-offset-2">Open the improved report</a>
+          </p>
+        ) : null}
         {project.status === "complete" && (
           <div className="mt-6 print:hidden">
             <Progress project={project} active={null} reviewable />

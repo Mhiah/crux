@@ -18,6 +18,22 @@ const PRIMARY_PASS_QUERIES = 4;
 
 export type CollectResult = { research: Research; models: string[]; warnings: string[] };
 
+/** Follow-up research (e.g. on a review's critiques) adds to a report instead of starting one. */
+export type CollectOptions = {
+  /** Run these searches instead of having SERV plan them. */
+  queries?: string[];
+  /** Addresses already in the report: not picked again, so everything found is new. */
+  excludeUrls?: ReadonlySet<string>;
+  /** Number new sources and facts after the report's own (S21, C29, ...). */
+  firstSourceNumber?: number;
+  firstClaimNumber?: number;
+  maxSources?: number;
+  /** What the follow-up is looking for, given to the fact extraction. */
+  focus?: string;
+  /** Finding nothing new is a result, not an error. */
+  allowEmpty?: boolean;
+};
+
 type RawClaim = Pick<Claim, "text" | "category" | "stance" | "quotes">;
 /**
  * Models sometimes wrap a claim in quotation marks, or open a quote inside it and never close
@@ -87,23 +103,36 @@ export async function collectResearch(
   question: string,
   reasoning: ReasoningProvider,
   search: SearchProvider,
+  options: CollectOptions = {},
 ): Promise<CollectResult> {
   const warnings: string[] = [];
   const models: string[] = [];
-
-  const plan = await reasoning.reason<QueryPlan>({
-    step: "query_plan",
-    system: QUERY_PLAN_SYSTEM,
-    user: `Research question: ${question}`,
-    schema: QUERY_PLAN_SCHEMA,
+  const empty = (queries: string[]): CollectResult => ({
+    research: { queries, sources: [], claims: [], fact_check: { extracted: 0, dropped: 0, merged: 0, flagged: 0 } },
+    models,
+    warnings,
   });
-  models.push(plan.model);
-  const queries = interleave(plan.output);
-  if (!plan.output.challenging_queries?.length) warnings.push("The search plan had no queries aimed at evidence against the answer.");
 
+  let queries: string[];
+  if (options.queries) {
+    queries = [...new Set(options.queries.map((q) => q.trim()).filter(Boolean))];
+  } else {
+    const plan = await reasoning.reason<QueryPlan>({
+      step: "query_plan",
+      system: QUERY_PLAN_SYSTEM,
+      user: `Research question: ${question}`,
+      schema: QUERY_PLAN_SCHEMA,
+    });
+    models.push(plan.model);
+    queries = interleave(plan.output);
+    if (!plan.output.challenging_queries?.length) warnings.push("The search plan had no queries aimed at evidence against the answer.");
+  }
+
+  // Given queries are few and targeted, so each also gets the research-and-official pass.
+  const primaryPass = options.queries ? queries.length : PRIMARY_PASS_QUERIES;
   const searches = [
     ...queries.map((q) => ({ query: q, domains: undefined })),
-    ...queries.slice(0, PRIMARY_PASS_QUERIES).map((q) => ({ query: q, domains: PRIMARY_DOMAINS })),
+    ...queries.slice(0, primaryPass).map((q) => ({ query: q, domains: PRIMARY_DOMAINS })),
   ];
   const settled = await Promise.allSettled(searches.map((s) => search.search(s.query, RESULTS_PER_QUERY, { domains: s.domains })));
   const noCredits = settled.find((r) => r.status === "rejected" && r.reason instanceof OutOfCredits);
@@ -115,7 +144,7 @@ export async function collectResearch(
       return [];
     }
     // Only web links: a result's URL becomes a clickable link in the report.
-    return r.value.filter((hit) => /^https?:\/\//i.test(hit.url)).map((hit) => {
+    return r.value.filter((hit) => /^https?:\/\//i.test(hit.url) && !options.excludeUrls?.has(hit.url)).map((hit) => {
       const kind = classifySource(hit.url);
       return {
         url: hit.url,
@@ -129,15 +158,22 @@ export async function collectResearch(
       };
     });
   });
-  if (perQuery.every((l) => l.length === 0)) throw new Error("Research found no sources. Check the search provider and try a different question.");
+  if (perQuery.every((l) => l.length === 0)) {
+    if (options.allowEmpty) {
+      warnings.push("The follow-up searches found no sources the report doesn't already use.");
+      return empty(queries);
+    }
+    throw new Error("Research found no sources. Check the search provider and try a different question.");
+  }
 
-  const sources: Source[] = pickSources(perQuery, MAX_SOURCES).map((s, i) => ({ id: `S${i + 1}`, ...s }));
+  const firstSource = options.firstSourceNumber ?? 1;
+  const sources: Source[] = pickSources(perQuery, options.maxSources ?? MAX_SOURCES).map((s, i) => ({ id: `S${firstSource + i}`, ...s }));
   const byId = new Map(sources.map((s) => [s.id, s]));
 
   const extracted = await reasoning.reason<{ claims: RawClaim[]; sources?: { source_id: string; kind: string }[] }>({
     step: "claims",
     system: CLAIMS_SYSTEM,
-    user: `Research question: ${question}\n\nSources:\n${formatSources(sources)}`,
+    user: `Research question: ${question}${options.focus ? `\n\n${options.focus}` : ""}\n\nSources:\n${formatSources(sources)}`,
     schema: CLAIMS_SCHEMA,
   });
   models.push(extracted.model);
@@ -178,7 +214,7 @@ export async function collectResearch(
       same.unmatched_numbers = unmatchedNumbers(same.text, same.quotes.map((q) => q.text));
       continue;
     }
-    const id = `C${claims.length + 1}`;
+    const id = `C${(options.firstClaimNumber ?? 1) + claims.length}`;
     const unmatched = unmatchedNumbers(c.text, quotes.map((q) => q.text));
     if (unmatched.length) warnings.push(`${id}: figures ${unmatched.join(", ")} aren't in its quoted source text; flagged.`);
     claims.push({
@@ -191,9 +227,10 @@ export async function collectResearch(
       unmatched_numbers: unmatched,
     });
   }
-  if (claims.length === 0) throw new Error("No claims could be verified against the sources.");
-
-  if (!claims.some((c) => c.stance === "challenges")) {
+  if (claims.length === 0) {
+    if (!options.allowEmpty) throw new Error("No claims could be verified against the sources.");
+    warnings.push("No new fact from the follow-up searches could be verified against its source.");
+  } else if (!options.queries && !claims.some((c) => c.stance === "challenges")) {
     warnings.push("No evidence against a 'yes' answer survived extraction; the stress test has only reasoning to go on.");
   }
 

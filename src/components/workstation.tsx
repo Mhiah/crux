@@ -5,7 +5,7 @@ import { RefsProvider, useTrace } from "./refs";
 import { ReppoReviewPanel } from "./reppo-review";
 import { claimsBehind, factCheckSummary, recordIds, refsIn, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL, type SourceKind } from "@/lib/research/sources";
-import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type ResearchProject, type Source, type Stage } from "@/lib/types";
+import { weakOnly, type AssumptionVerdict, type Challenge, type Claim, type Confidence, type CritiqueResponse, type ResearchProject, type Revision, type Source, type Stage } from "@/lib/types";
 
 /**
  * The research report, in three views: Answer (what to do and what changed), Reasoning
@@ -47,6 +47,7 @@ const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 };
 const STANCE_LABEL: Record<Claim["stance"], string> = { supports: "for", challenges: "against", neutral: "neutral" };
 
 const human = (s: string) => s.replace(/_/g, " ");
+const RESPONSE_TONE: Record<CritiqueResponse["status"], Tone> = { addressed: "good", partly_addressed: "warn", not_addressed: "bad" };
 
 function ConfidenceBadge({ level }: { level: Confidence }) {
   return <Badge tone={CONFIDENCE_TONE[level]}>{level} confidence</Badge>;
@@ -324,6 +325,111 @@ function NextButton({ to, children }: { to: View; children: ReactNode }) {
 // ---------------------------------------------------------------------------------------
 // Answer: the conclusion, what changed, and what to do next
 
+/**
+ * What learning from the independent review changed: the answer before and after, how each
+ * critique was answered, and the counts before and after (computed in code, not by SERV).
+ */
+function RevisionView({ revision, conclusion }: { revision: Revision; conclusion: NonNullable<ResearchProject["conclusion"]> }) {
+  const { plain } = useNav();
+  const m = revision.metrics;
+  const verdict = [revision.review.decision, revision.review.score !== undefined ? `${revision.review.score}/100` : null].filter(Boolean).join(" · ");
+  const rows: [string, string | number, string | number][] = [
+    ["Facts", m.facts.before, m.facts.after],
+    ["Facts against the answer", m.facts_against.before, m.facts_against.after],
+    ["Research, official and industry sources used", m.strong_sources.before, m.strong_sources.after],
+    ["Facts with a flagged figure", m.flagged_figures.before, m.flagged_figures.after],
+    ["Confidence", m.confidence.before, m.confidence.after],
+  ];
+  return (
+    <section id="after-review" className="scroll-mt-24">
+      <Heading aside={verdict ? `Reppo: ${verdict}` : undefined}>After independent review</Heading>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Card>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-muted">Before the review</h3>
+            <ConfidenceBadge level={revision.original_conclusion.confidence} />
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted">{plain(revision.original_conclusion.final_statement)}</p>
+        </Card>
+        <Card className="border-foreground/25">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold">After the review</h3>
+            <ConfidenceBadge level={conclusion.confidence} />
+          </div>
+          <p className="mt-2 text-sm leading-relaxed">{plain(conclusion.final_statement)}</p>
+        </Card>
+      </div>
+
+      <h3 className="mt-6 text-sm font-semibold">
+        Reppo&apos;s critiques <span className="font-normal text-muted">· {m.critiques.addressed} of {m.critiques.total} addressed{m.critiques.partly ? `, ${m.critiques.partly} partly` : ""}</span>
+      </h3>
+      <ol className="mt-3 space-y-3">
+        {revision.responses.map((r, i) => (
+          <li key={i}>
+            <Card>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge tone={RESPONSE_TONE[r.status]}>{human(r.status)}</Badge>
+                <span className="text-sm font-semibold">{r.dimension}</span>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{r.critique}</p>
+              <p className="mt-2 text-sm leading-relaxed">{plain(r.response)}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <EvidenceLink label={r.dimension} ids={r.claim_ids} text={r.response} />
+                {r.research_query && <span className="text-xs text-muted">Searched: {r.research_query}</span>}
+              </div>
+            </Card>
+          </li>
+        ))}
+      </ol>
+
+      {revision.changes.length > 0 && (
+        <>
+          <h3 className="mt-6 text-sm font-semibold">What the review changed</h3>
+          <ol className="mt-3 space-y-3">
+            {revision.changes.map((ch, i) => (
+              <li key={i}>
+                <Card>
+                  <p className="text-sm text-muted line-through decoration-muted/40">{plain(ch.from)}</p>
+                  <p className="mt-1 text-sm font-medium">→ {plain(ch.to)}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-muted">{plain(ch.reason)}</p>
+                  <div className="mt-3">
+                    <EvidenceLink label={`“${plain(ch.to)}”`} ids={ch.claim_ids} text={ch.reason} />
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ol>
+        </>
+      )}
+
+      <h3 className="mt-6 text-sm font-semibold">What improved</h3>
+      <div className="mt-3 overflow-hidden rounded-xl border border-line">
+        <table className="w-full text-sm">
+          <thead className="bg-surface text-left text-muted">
+            <tr>
+              <th className="px-3 py-2 font-medium" />
+              <th className="px-3 py-2 font-medium">Before</th>
+              <th className="px-3 py-2 font-medium">After</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(([label, before, after]) => (
+              <tr key={label} className="border-t border-line">
+                <td className="px-3 py-2">{label}</td>
+                <td className="px-3 py-2 text-muted">{before}</td>
+                <td className={`px-3 py-2 ${before !== after ? "font-semibold" : ""}`}>{after}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="mt-2 text-xs text-muted">
+        Counted from the two reports. {revision.new_claim_ids.length} new fact{revision.new_claim_ids.length === 1 ? "" : "s"} from {revision.new_source_ids.length} new source{revision.new_source_ids.length === 1 ? "" : "s"}, each checked against its source like the rest.
+      </p>
+    </section>
+  );
+}
+
 function AnswerView({ project }: { project: ResearchProject }) {
   const { plain } = useNav();
   const c = project.conclusion;
@@ -388,6 +494,8 @@ function AnswerView({ project }: { project: ResearchProject }) {
           )}
         </section>
       )}
+
+      {project.revision && <RevisionView revision={project.revision} conclusion={c} />}
 
       <div className="grid gap-3 sm:grid-cols-2">
         <Card>

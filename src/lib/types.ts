@@ -154,6 +154,47 @@ export type WhatChanged = {
   unresolved: string[];
 };
 
+/** How a revision answered one critique from the independent review. */
+export type CritiqueResponse = {
+  /** The critique, copied from the review so the revision stands on its own. */
+  dimension: string;
+  critique: string;
+  /** The focused search Crux ran for it. */
+  research_query: string;
+  status: "addressed" | "partly_addressed" | "not_addressed";
+  /** What the revision did about it, citing record IDs. */
+  response: string;
+  claim_ids: string[];
+};
+
+/** Counted in code from the two reports, never estimated by the model. */
+export type RevisionMetrics = {
+  facts: { before: number; after: number };
+  facts_against: { before: number; after: number };
+  flagged_figures: { before: number; after: number };
+  strong_sources: { before: number; after: number };
+  confidence: { before: Confidence; after: Confidence };
+  critiques: { total: number; addressed: number; partly: number; not_addressed: number };
+};
+
+/** A report revised after an independent review. The original report is never changed. */
+export type Revision = {
+  /** The report this one revises. */
+  of: string;
+  created_at: string;
+  review: { eval_id: string; decision?: string; score?: number };
+  responses: CritiqueResponse[];
+  /** What the revised conclusion changed, and why. */
+  changes: { from: string; to: string; reason: string; claim_ids: string[] }[];
+  /** Facts and sources this revision added. */
+  new_claim_ids: string[];
+  new_source_ids: string[];
+  metrics: RevisionMetrics;
+  /** Conclusion of the original report, kept for side-by-side comparison. */
+  original_conclusion: { final_statement: string; confidence: Confidence };
+  warnings: string[];
+};
+
 export type Stage = "research" | "thesis" | "stress_test" | "reevaluation" | "conclusion" | "what_changed";
 
 export type ReasoningAudit = {
@@ -182,6 +223,10 @@ export type ResearchProject = {
   what_changed: WhatChanged | null;
   /** Optional external review; never present for an unsubmitted research report. */
   reppo?: ReppoReview;
+  /** Present when this report is a revision made from an independent review's critiques. */
+  revision?: Revision;
+  /** IDs of revisions made from this report's review, oldest first. */
+  revisions?: string[];
   audit: ReasoningAudit[];
   error: string | null;
   /** Why a mock run is on sample data, when it fell back from a live run that ran out of credits. */

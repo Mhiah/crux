@@ -41,7 +41,7 @@ Now, Independent review comes right after it:
 | --- | --- | --- |
 | Who criticises the answer | SERV, inside Crux | SERV inside Crux, then Reppo from outside |
 | Last step | What changed | Independent review |
-| What you get | A stress-tested answer | A stress-tested answer, plus an independent verdict and critiques |
+| What you get | A stress-tested answer | A stress-tested answer, an independent verdict and critiques, and an improved report that answers them |
 | Reports | Kept by downloading the PDF | Saved for 90 days, so a review can be requested and checked later |
 
 ## How Crux works
@@ -57,6 +57,7 @@ Ask a hard business question. Crux runs seven steps, and the report fills in liv
 | Conclusion | SERV | The best-supported answer, its confidence, what's uncertain and what to check next | about 7 s |
 | What changed | Crux | The first answer next to the final one, and why it moved, assembled from the recorded steps | instant |
 | **Independent review** | **Reppo** | **The report goes to Reppo's evaluators, who judge the reasoning against five criteria and return a verdict and critiques** | **10 min or more** |
+| **Improve with the feedback** | **SERV + Tavily** | **One focused search per critique, new facts checked against their sources, and a revised answer that responds to every critique, saved as a new report linked to the original** | **about a minute** |
 
 The research takes about a minute (6 SERV calls and 12 Tavily searches). The review runs separately afterwards, so it never slows down the answer.
 
@@ -80,7 +81,18 @@ How it works on a report:
 
 A verdict is independent feedback on the reasoning, not proof that every fact is correct.
 
-**Who can request a review, and what it costs.** Each review can use a Reppo credit, so only the owner key can request one, consent must be ticked every time, a report can only be submitted once, and reviews are off unless `REPPO_REVIEW_ENABLED=1`. Reppo's evaluators may see the submitted trace, so don't submit confidential research.
+### Learning from the critique
+
+When the verdict is in, **Improve with this feedback** closes the loop:
+
+1. Each critique becomes one focused web search, aimed at original data, that could resolve it.
+2. Only sources the report doesn't already use are kept, and every new fact is checked against its source's own words, like the rest.
+3. SERV revises the answer with the original and new evidence and the critiques in front of it. For every critique it says whether it is now addressed, partly addressed or not addressed, and why.
+4. The improved report is saved as a new report, linked to the original, which stays exactly as it was. Its **After independent review** section shows the answer before and after, each critique and what was done about it, what changed, and a **What improved** table (facts, facts against, research and official sources, flagged figures, confidence) counted in code from the two reports, not estimated by the model.
+
+The improved report can be sent for its own independent review, so the cycle can repeat.
+
+**Who can request a review, and what it costs.** Each review can use a Reppo credit, and each improvement uses SERV and Tavily credits, so only the owner key can request either, consent must be ticked every time, a report can only be submitted once, and reviews are off unless `REPPO_REVIEW_ENABLED=1`. Reppo's evaluators may see the submitted trace, so don't submit confidential research.
 
 ## Architecture
 
@@ -109,6 +121,10 @@ flowchart LR
   Review -->|report trace + 5 criteria| Reppo
   Reppo -->|verdict and critiques| Review
   Review --> Store
+  Store -->|critiques| Improve["/api/research/:id/revise<br/>(owner key)"]
+  Improve -->|one search per critique| Tavily
+  Improve -->|revision| SERV
+  Improve -->|new linked report| Store
   Browser -->|Download| PDF
 ```
 
@@ -118,6 +134,7 @@ flowchart LR
 4. The reasoning steps ([src/lib/reasoning/stages.ts](src/lib/reasoning/stages.ts)) cite records by ID. Unknown IDs are removed and logged before anything is saved.
 5. Reports are saved ([src/lib/store.ts](src/lib/store.ts)) in Redis on Vercel for 90 days, or as files locally, and reopen at `/research/:id`.
 6. Independent review ([src/app/api/research/[id]/review/route.ts](src/app/api/research/%5Bid%5D/review/route.ts)) builds the trace ([src/lib/reppo/payload.ts](src/lib/reppo/payload.ts)), submits it to Reppo, and saves the evaluation and, later, the verdict.
+7. Improving ([src/lib/revise.ts](src/lib/revise.ts)) runs one focused search per critique through the same research and fact-check code, has SERV revise the answer, counts the before and after in code, and saves the result as a new report linked to the original.
 
 ## What the report shows
 
@@ -178,6 +195,8 @@ Each SERV step is a separate SERV Reasoning call (OpenAI-compatible chat complet
 | Re-evaluation | SERV | Facts, thesis, stress test | A verdict and reasoning for every assumption, the revised thesis, every change and what caused it |
 | Conclusion | SERV | The whole record | Final answer, confidence, key supporting and challenging facts, uncertainties, next validation steps |
 | Independent review | Reppo | A compact trace of the whole report (under 18 KB) and the five criteria | An evaluation ID, then a verdict (accept, revise or reject), score, confidence and per-criterion critiques |
+| Revision plan | SERV | The question, the conclusion and the review's critiques | One focused search per critique |
+| Revision | SERV | All the evidence (original and new), the original reasoning and conclusion, and the critiques | A response to every critique (addressed, partly or not, with the facts behind it), the revised conclusion, and every change from the original |
 
 Each SERV call carries SERV's `serv_prompt_guard`, because the steps read untrusted web text. Model: `gpt-5.4-mini` through SERV by default (`SERV_MODEL` to change it).
 
@@ -202,13 +221,13 @@ A research tool is only useful if you can trust what it shows, so these rules ar
 
 Two limits to be plain about: a fact's **stance** (for or against) and the **type** of an unrecognised source are the model's judgement, and the fact check proves a quote is real, not that the fact's wording is a perfect paraphrase.
 
-## What's next: learning from the criticism
+## What's next
 
-Independent review is live. The next step closes the loop described at the top:
+Independent review and learning from it are built. Next:
 
-1. **Targeted research.** Turn each Reppo critique into a focused research question, and revisit only the claims, assumptions or reasoning it affects, instead of rerunning the whole report.
-2. **Auditable revision.** Keep the original report and Reppo's feedback unchanged, create a linked revision, and show exactly what changed and why, the way What changed does today.
-3. **Measured improvement.** Compare the versions: evidence coverage, unsupported claims, critiques addressed, confidence justification and Reppo's assessment. A higher score is never treated as proof the answer is true.
+1. **Run the full loop live.** The first live review is waiting for Reppo's verdict; once it arrives, improve that report and send the improved one for its own review, to compare Reppo's two assessments.
+2. **Reppo's verdict and the improvement in the PDF report.**
+3. **User accounts,** so reviews and improvements aren't limited to one owner key.
 
 Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
@@ -216,7 +235,7 @@ Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
 - **Reppo, live.** The first review request was accepted by Reppo. On the main site, the connection check reports Reppo connected (API key accepted) and Redis connected.
 - **Live research runs** with SERV and Tavily on the demo question: the case against is found (6 to 9 facts against per run), and research, official and industry sources make up most of the 20 sources.
-- **Unit tests** (`npm test`, 89 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, and the Reppo request, response parsing and owner-only access.
+- **Unit tests** (`npm test`, 94 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
 - **In a real browser** (headless Chromium): every view from 320 px phones to desktop, light and dark, PDF downloads, and the Independent review step from every view.
 - **Type check, lint and production build** are clean, and GitHub Actions runs them on every pull request to `main`, without live API calls.
 
@@ -273,6 +292,7 @@ src/
     research/[id]/page.tsx    A saved report
     api/research/             POST a question (streams NDJSON), GET a saved run
     api/research/[id]/review/ Request a Reppo review, check for its verdict
+    api/research/[id]/revise/ Improve a report from its review's critiques
     api/reppo/connection/     Owner-only Reppo and Redis connection check
     reppo-connect/page.tsx    The page for that check
   components/
@@ -282,6 +302,7 @@ src/
     refs.tsx                  Audit-trail panel
   lib/
     pipeline.ts               Runs the steps and records the audit trail
+    revise.ts                 Learning from the review: focused searches, revision, metrics
     reasoning/                SERV client, prompts, strict schemas, steps
     research/                 Search, source selection, fact check, source labels
     reppo/                    Reppo client, request builder, owner access, connection check
@@ -296,7 +317,7 @@ docs/S2_TASKS.md              Task tracker
 ## Known limitations
 
 - **Independent review is owner-only.** There are no user accounts yet, so one owner key controls reviews, and each review can use a Reppo credit.
-- **Learning from the critique is next.** Today the verdict and critiques are shown and saved; turning them into targeted research and a measured revision is the next build.
+- **Learning from the critique hasn't run live yet.** It's built and tested with sample critiques; the first live run waits for Reppo's first verdict. Each report is improved once, from up to five critiques.
 - **The PDF doesn't include the Reppo verdict yet.**
 - **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.
 - **Judgement calls.** A fact's stance and the type of an unrecognised source come from the model.

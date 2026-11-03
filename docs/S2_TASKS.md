@@ -20,8 +20,8 @@
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
 - [ ] **S2-07** Live Reppo submission accepted after fixing the required `criteria` field; screenshot shows **Awaiting review**. **Next: retrieve settled verdict and confirm it persists.**
 - [x] **S2-07b** Production set up: Redis connected to Production, and `REPPO_API_KEY`, `CRUX_REVIEW_ACCESS_TOKEN` and `REPPO_REVIEW_ENABLED` added for Production (owner-confirmed). Season 2 merged into `main`.
-- [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
-- [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
+- [x] **S2-08** Learning from the review (built, tested with sample critiques; first live run waits for the first verdict): **Improve with this feedback** runs one focused search per critique, fact-checks the new facts, has SERV revise the answer and answer every critique, and saves a new linked report with an **After independent review** section and code-counted before/after metrics. The original report is never changed. Check for verdict now also shows the time and Reppo's own status.
+- [x] **S2-09** Versioning: the original keeps its verdict and critiques; the revision stores the review it answers, every response, the changes, new fact and source IDs, metrics and warnings, and links both ways (`revision.of`, `revisions`).
 - [ ] **S2-10** Update README Season 2 positioning, preserve dashboard design, link **Independent review** directly after **What changed**, document real before/after screenshots. UI and documentation complete; later revision/result presentation remains pending.
   - [x] Independent review link also shows on saved reports (`/research/[id]`), where the verdict is checked.
   - [x] The link switches to the Answer view before scrolling, so it works from the Reasoning and Evidence tabs.

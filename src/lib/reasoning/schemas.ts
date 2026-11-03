@@ -172,3 +172,53 @@ export const CONCLUSION_SCHEMA = schema(
     ),
   }),
 );
+
+export const REVISION_PLAN_SCHEMA = schema(
+  "revision_plan",
+  obj({
+    items: arr(
+      obj({
+        critique_number: { type: "integer", description: "The number of the critique (R1 is 1)." },
+        research_query: str("One web search query that would find evidence to resolve this critique: specific, aimed at original data (surveys, studies, official statistics)."),
+      }),
+      "One item per critique, in the critiques' order.",
+    ),
+  }),
+);
+
+export const REVISION_SCHEMA = schema(
+  "revision",
+  obj({
+    responses: arr(
+      obj({
+        critique_number: { type: "integer", description: "The number of the critique (R1 is 1)." },
+        status: strEnum(["addressed", "partly_addressed", "not_addressed"], "Whether the revised conclusion and the evidence now answer this critique."),
+        response: str("What changed because of this critique, or why it could not be resolved. Cite claim IDs."),
+        claim_ids: ids("C", "facts that answer this critique, especially new ones"),
+      }),
+      "Exactly one response per critique.",
+    ),
+    final_statement: str("The revised best-supported answer to the research question, with its conditions. Two to four sentences."),
+    confidence: strEnum(CONFIDENCE),
+    confidence_rationale: str("Why this confidence level now, after the independent review and the new evidence."),
+    key_supporting_claim_ids: ids("C", "the claims that most support the revised conclusion"),
+    key_challenging_claim_ids: ids("C", "the claims that most cut against it"),
+    uncertainties: arr(str(), "What remains uncertain."),
+    next_validation_steps: arr(
+      obj({
+        step: str("A concrete, cheap action that would reduce the biggest remaining uncertainty."),
+        resolves: str("Which uncertainty it resolves."),
+      }),
+      "2-4 steps, most valuable first.",
+    ),
+    changes: arr(
+      obj({
+        from: str("What the original conclusion said or implied."),
+        to: str("What the revised conclusion says instead."),
+        reason: str("Which critique and which evidence caused it."),
+        claim_ids: ids("C", "claims that caused this change"),
+      }),
+      "Every material change from the original conclusion. Empty if the conclusion stands.",
+    ),
+  }),
+);
