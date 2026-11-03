@@ -18,13 +18,15 @@
   - [x] Screenshot of S2 Preview `/reppo-connect`: Reppo authenticated (HTTP 200); Redis PING succeeded. No evaluation submitted.
   - [x] Owner reports `REPPO_REVIEW_ENABLED=1` saved on the S2 Preview branch; deployment behavior still needs a live verification.
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
-- [ ] **S2-07** With the owner's approval, submit one non-sensitive live report, retrieve the settled verdict and verify persistence, error handling and rate limits.
+- [ ] **S2-07** First live report created and saved. Owner tried submitting an independent review; UI returned generic `Unable to submit to Reppo. Check API access, credits, and logs.` **BLOCKED pending Vercel runtime log inspection and confirmation in Reppo console whether an evaluation was accepted. Do not retry until duplicate/credit risk is resolved.**
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
 - [ ] **S2-10** Adjust tagline and integrate evaluation/revision output into the *existing* dashboard. No redesign.
 - [ ] **S2-11** Complete regression, live end-to-end tests, demo, review and merge.
 
 ## Current task
+
+**S2-07 diagnostic** — In Vercel Preview deployment runtime Logs, locate the `Reppo submission failed:` error for `POST /api/research/[id]/review`. Note the HTTP status or stage, not secret values. Also check Reppo console's evaluation history to avoid duplicate charges. Existing S2 review route hides backend error detail behind 502. Do not re-submit until classified.
 
 **S2-07 controlled test** — Owner reports the Preview-only evaluation flag is configured. Verify the latest Preview deployment, generate one non-sensitive **live** research report, then explicitly opt in before sending it to Reppo. Do not use mock reports or publish private information. Check the returned evaluation ID, settlement and persisted result.
 
