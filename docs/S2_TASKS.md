@@ -18,7 +18,7 @@
   - [x] Screenshot of S2 Preview `/reppo-connect`: Reppo authenticated (HTTP 200); Redis PING succeeded. No evaluation submitted.
   - [x] Owner reports `REPPO_REVIEW_ENABLED=1` saved on the S2 Preview branch; deployment behavior still needs a live verification.
 - [x] **S2-06** Executed the non-billable owner-authenticated S2 Preview connection check: Reppo HTTP 200 and Redis PING succeeded (owner-supplied browser result). No evaluation submitted.
-- [ ] **S2-07** First live report created and saved. Owner tried submitting an independent review; UI returned generic `Unable to submit to Reppo. Check API access, credits, and logs.` **BLOCKED pending Vercel runtime log inspection and confirmation in Reppo console whether an evaluation was accepted. Do not retry until duplicate/credit risk is resolved.**
+- [ ] **S2-07** A live report was saved and its no-charge preflight succeeded. First submission returned HTTP 400 (missing `criteria`); Reppo console showed no evaluations at the time checked. Fixed request shape to include 5 review criteria (string array) in the S2 branch. **Next: check CI and Preview deployment, rerun preflight and confirm 5 criteria before any new paid submission.**
 - [ ] **S2-08** Implement SERV V2 feedback-driven corrections grounded in the affected claims, with immutable original reports.
 - [ ] **S2-09** Version and audit the original verdict, external critique, additional evidence, and revised conclusion.
 - [ ] **S2-10** Adjust tagline and integrate evaluation/revision output into the *existing* dashboard. No redesign.
@@ -26,13 +26,13 @@
 
 ## Current task
 
-**S2-07 troubleshooting** — Reppo returned upstream HTTP 400. Owner's Reppo console showed no evaluations. Added a compact evidence-linked submission, a no-charge preflight check, and bounded upstream error messages. Run CI and verify the new Preview build before using the preflight on the saved report. Do **not** retry a paid evaluation without explicit approval.\n\n**S2-07 diagnostic** — In Vercel Preview deployment runtime Logs, locate the `Reppo submission failed:` error for `POST /api/research/[id]/review`. Note the HTTP status or stage, not secret values. Also check Reppo console's evaluation history to avoid duplicate charges. Existing S2 review route hides backend error detail behind 502. Do not re-submit until classified.
+**S2-07: Fix Reppo submission validation.** The latest Reppo error was `HTTP 400: criteria: Required`. The initial payload omitted the `criteria` field; the deployed gateway expects it as an array of 1–10 strings. We added five Crux-specific criteria (citation support, counter-evidence, reasoning consistency, calibrated confidence, validation steps) to the request builder, with unit tests. The existing no-charge preflight now displays the criteria count. No live Reppo submission was performed by this code change.
 
-**S2-07 controlled test** — Owner reports the Preview-only evaluation flag is configured. Verify the latest Preview deployment, generate one non-sensitive **live** research report, then explicitly opt in before sending it to Reppo. Do not use mock reports or publish private information. Check the returned evaluation ID, settlement and persisted result.
+**Next:** Check green CI and Ready Preview for the latest commit. Open the *existing saved report*, enter the owner review key, click **Check request (no charge)** and confirm **Criteria included: 5**. Only then attempt one consented review after reviewing the potential credit charge. Do not create another research report solely to test the request shape.
 
 ## Next user-owned setup step
 
-Credentials and Redis connectivity have been verified on S2 Preview without exposing secrets. The remaining flag `REPPO_REVIEW_ENABLED=1` is **not yet confirmed**. Keep evaluation submissions disabled until a controlled test is approved. In Vercel, scope the flag to Preview and branch `feat/s2-reppo-review`; new environment variables take effect with a new deployment. Never paste secret values into chat.
+Reppo authentication and Redis PING passed in S2 Preview. The owner configured the evaluation flag and personally initiated a test submission, which returned HTTP 400: criteria missing. Validate the new criteria-bearing payload using no-charge preflight before retrying. Never paste keys into chat; use the existing saved report.
 
 ## Testing notes
 

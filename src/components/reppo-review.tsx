@@ -35,7 +35,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
         cache: "no-store", headers: { "x-crux-review-token": accessToken },
       });
       const data = await response.json() as {
-        diagnostics?: { payload_bytes: number; max_payload_bytes: number };
+        diagnostics?: { payload_bytes: number; max_payload_bytes: number; criteria_count: number };
         error?: string;
         existing_review?: boolean;
       };
@@ -43,7 +43,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
       setPreflight(
         "Request prepared: " + data.diagnostics.payload_bytes.toLocaleString() +
         " bytes (limit " + data.diagnostics.max_payload_bytes.toLocaleString() +
-        "). No evaluation submitted." +
+        "). Criteria included: " + data.diagnostics.criteria_count + ". No evaluation submitted." +
         (data.existing_review ? " A review is already stored for this report." : "")
       );
     } catch (err) { setError(err instanceof Error ? err.message : "Request check failed."); }

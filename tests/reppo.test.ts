@@ -18,6 +18,9 @@ describe("S2 independent evaluation", () => {
     const data = buildReppoPayload(await fixture());
     expect(data.type).toBe("trace");
     expect(data.settlementMinutes).toBe(10);
+    expect(data.criteria).toHaveLength(5);
+    expect(data.criteria.every((criterion) => typeof criterion === "string" && criterion.length > 15)).toBe(true);
+    expect(inspectReppoPayload(await fixture()).criteria_count).toBe(5);
     expect(new TextEncoder().encode(data.payload).length).toBeLessThanOrEqual(18_000);
     expect(inspectReppoPayload(await fixture()).request_bytes).toBeLessThan(20_000);
     const trace = JSON.parse(data.payload);
@@ -34,7 +37,11 @@ describe("S2 independent evaluation", () => {
     const transport = (async (_url: RequestInfo | URL, init?: RequestInit) => {
       expect(init?.method).toBe("POST");
       expect((init?.headers as Record<string, string>).Authorization).toBe("Bearer test-key");
-      expect(JSON.parse(String(init?.body)).type).toBe("trace");
+      const submitted = JSON.parse(String(init?.body));
+      expect(submitted.type).toBe("trace");
+      expect(submitted.criteria).toHaveLength(5);
+      expect(submitted.criteria[0]).toMatch(/cited source quotations/);
+      expect(submitted.payload).toBeTypeOf("string");
       return new Response(JSON.stringify({ evalId: "eval_1234" }), { status: 200 });
     }) as typeof fetch;
     await expect(submitReppo(project, "test-key", transport)).resolves.toBe("eval_1234");

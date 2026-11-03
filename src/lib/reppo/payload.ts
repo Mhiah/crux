@@ -2,6 +2,18 @@ import type { Claim, ResearchProject } from "../types";
 
 /** Keep an evidence-linked sample well under Reppo's published 50 KB text cap. */
 const MAX_PAYLOAD_BYTES = 18_000;
+
+/** Reppo's currently deployed gateway requires 1-10 criteria as plain strings.
+ * A Reppo-maintained legacy lease fixture confirms the string[] shape.
+ * Keep these specific to Crux's evidence-first research, not generic "accuracy" grades.
+ */
+export const CRUX_REVIEW_CRITERIA = [
+  "Do the cited source quotations support the report's key factual claims, without unsupported leaps?",
+  "Does the stress test address the strongest counter-evidence, risks, and alternative explanations fairly?",
+  "Does the final conclusion logically follow from the evidence, challenges, and re-evaluation?",
+  "Is the stated confidence calibrated to evidence quality, missing data, and unresolved uncertainties?",
+  "Are the suggested validation steps specific and relevant to the remaining uncertainties?",
+] as const;
 const bytes = (text: string) => new TextEncoder().encode(text).length;
 const cut = (text: string, n: number) => text.slice(0, n);
 
@@ -71,6 +83,7 @@ export function buildReppoPayload(project: ResearchProject) {
   return {
     type: "trace" as const,
     payload,
+    criteria: [...CRUX_REVIEW_CRITERIA],
     context: "Independent review of a Crux research decision using SERV Reasoning V2. Evaluate whether the conclusion follows from cited evidence, considers counter-evidence, justifies confidence, and acknowledges limitations. Quotes were matched to source excerpts, but are not independently fact-verified. This is a compact summary; Crux preserves the original report.",
     settlementMinutes: 10 as const,
   };
@@ -84,6 +97,7 @@ export function inspectReppoPayload(project: ResearchProject) {
     payload_bytes: bytes(request.payload),
     request_bytes: bytes(JSON.stringify(request)),
     max_payload_bytes: MAX_PAYLOAD_BYTES,
+    criteria_count: request.criteria.length,
     source_count: project.research?.sources.length ?? 0,
   };
 }
