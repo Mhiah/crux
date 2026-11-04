@@ -9,14 +9,14 @@ type Result = {
   storage: "connected" | "missing" | "unreachable";
 };
 const summary: Record<ReppoConnectionStatus["state"], string> = {
-  connected: "Connected — API key accepted.",
+  connected: "Connected. API key accepted.",
   missing: "Missing server-side REPPO_API_KEY.",
   unauthorized: "Reppo did not accept the configured API key.",
   unreachable: "Reppo could not be reached.",
   error: "Reppo returned an unexpected status.",
 };
 const storageSummary: Record<Result["storage"], string> = {
-  connected: "Connected — Redis PING succeeded.",
+  connected: "Connected. Redis PING succeeded.",
   missing: "Redis REST variables are missing or incomplete.",
   unreachable: "Redis did not respond successfully.",
 };
@@ -37,7 +37,7 @@ export default function ReppoConnectionPage() {
         cache: "no-store",
       });
       if (!response.ok) throw new Error(response.status === 403
-        ? "Owner access key was rejected. Check CRUX_REVIEW_ACCESS_TOKEN in Vercel Preview."
+        ? "Owner access key was rejected. Check CRUX_REVIEW_ACCESS_TOKEN in Vercel."
         : "Connection check failed (HTTP " + response.status + ").");
       setResult(await response.json() as Result);
     } catch (cause) {
@@ -80,7 +80,7 @@ export default function ReppoConnectionPage() {
         </form>
         <p className="mt-4 text-xs text-muted">
           Never paste this key into chat. It stays in this browser tab and is
-          sent only to your Crux Preview deployment for authorization.
+          sent only to your Crux deployment for authorization.
         </p>
       </main>
     </>

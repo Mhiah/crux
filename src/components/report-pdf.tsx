@@ -2,7 +2,8 @@ import { Document, Font, Link, Page, StyleSheet, Text, View, pdf } from "@react-
 import type { ReactNode } from "react";
 import { factCheckSummary, recordIds, stripRefs } from "@/lib/plain";
 import { SOURCE_KIND_LABEL } from "@/lib/research/sources";
-import type { AssumptionVerdict, Challenge, Confidence, ResearchProject } from "@/lib/types";
+import type { ReppoReview } from "@/lib/reppo/types";
+import type { AssumptionVerdict, Challenge, Confidence, CritiqueResponse, ResearchProject, Revision } from "@/lib/types";
 
 /**
  * The downloadable report, built as a real PDF in the browser (selectable text, no print
@@ -44,6 +45,9 @@ const VERDICT_TONE: Record<AssumptionVerdict, Tone> = { supported: "good", weake
 const THESIS_TONE = { strengthened: "good", survived: "good", weakened: "warn", overturned: "bad" } as const;
 const SEVERITY_TONE: Record<Challenge["severity"], Tone> = { minor: "neutral", major: "warn", critical: "bad" };
 const SEVERITY_ORDER = { critical: 0, major: 1, minor: 2 };
+const DECISION_TONE: Record<string, Tone> = { accept: "good", revise: "warn", reject: "bad" };
+const RESPONSE_TONE: Record<CritiqueResponse["status"], Tone> = { addressed: "good", partly_addressed: "warn", not_addressed: "bad" };
+const reviewerLabel = (d: string) => d.replace(/^Criterion (\d+)$/, "Reviewer $1");
 
 const s = StyleSheet.create({
   page: { paddingTop: 44, paddingBottom: 56, paddingHorizontal: 44, fontFamily: "Inter", fontSize: 9.5, lineHeight: 1.5, color: C.text },
@@ -138,6 +142,8 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
           </View>
         )}
 
+        {project.revision && c && <RevisionSection revision={project.revision} conclusion={c} plain={plain} />}
+
         {wc && (
           <Group heading={<H2>What changed?</H2>}>
             {[
@@ -169,6 +175,8 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
             ]}
           </Group>
         )}
+
+        {project.reppo?.status === "settled" && <ReviewSection review={project.reppo} />}
 
         {c && (
           <>
@@ -301,6 +309,114 @@ export function ReportDocument({ project }: { project: ResearchProject }) {
         </Page>
       )}
     </Document>
+  );
+}
+
+/** Reppo's verdict on this report. Feedback from independent reviewers, not proof of every fact. */
+function ReviewSection({ review }: { review: ReppoReview }) {
+  const head = (
+    <View>
+      <H2>Independent review</H2>
+      <View style={[s.pills, { marginBottom: 6 }]}>
+        {review.decision && <Pill tone={DECISION_TONE[review.decision] ?? "neutral"}>{review.decision}</Pill>}
+        {review.score !== undefined && <Text style={{ fontWeight: 600 }}>{review.score}/100</Text>}
+        {review.confidence && <Text style={s.small}>{review.confidence} confidence</Text>}
+      </View>
+      <Text style={[s.small, { marginBottom: 6 }]}>
+        Powered by Reppo. An independent evaluation of the research and its reasoning, not proof that every fact is correct.
+      </Text>
+    </View>
+  );
+  if (!review.critiques.length) return head;
+  return (
+    <Group heading={head}>
+      {review.critiques.map((x, i) => (
+        <Card key={i}>
+          <Text style={s.h3}>
+            {reviewerLabel(x.dimension)}
+            {x.score !== undefined ? ` · ${x.score}/100` : ""}
+          </Text>
+          <Text style={s.muted}>{x.critique}</Text>
+        </Card>
+      ))}
+    </Group>
+  );
+}
+
+/** How this report was improved after its independent review, counted from the two reports. */
+function RevisionSection({ revision, conclusion, plain }: { revision: Revision; conclusion: NonNullable<ResearchProject["conclusion"]>; plain: (t: string) => string }) {
+  const m = revision.metrics;
+  const verdict = [revision.review.decision, revision.review.score !== undefined ? `${revision.review.score}/100` : null].filter(Boolean).join(" · ");
+  const rows: [string, string | number, string | number][] = [
+    ["Facts", m.facts.before, m.facts.after],
+    ["Facts against the answer", m.facts_against.before, m.facts_against.after],
+    ["Research, official and industry sources used", m.strong_sources.before, m.strong_sources.after],
+    ["Facts with a flagged figure", m.flagged_figures.before, m.flagged_figures.after],
+    ["Confidence", m.confidence.before, m.confidence.after],
+  ];
+  const addressed = m.critiques.addressed;
+  return (
+    <View>
+      <Group heading={<H2>After independent review{verdict ? ` · Reppo: ${verdict}` : ""}</H2>}>
+        {[
+          <View key="compare" style={s.row}>
+            <View style={[s.card, s.col]}>
+              <Text style={[s.h3, s.muted]}>Before the review · {revision.original_conclusion.confidence} confidence</Text>
+              <Text style={s.muted}>{plain(revision.original_conclusion.final_statement)}</Text>
+            </View>
+            <View style={[s.card, s.col, { borderColor: "#bdbdb8" }]}>
+              <Text style={s.h3}>After the review · {conclusion.confidence} confidence</Text>
+              <Text>{plain(conclusion.final_statement)}</Text>
+            </View>
+          </View>,
+        ]}
+      </Group>
+
+      <Group heading={<Text style={[s.h3, { marginTop: 8 }]}>Reppo&apos;s critiques · {addressed} of {m.critiques.total} addressed</Text>}>
+        {revision.responses.map((r, i) => (
+          <Card key={i}>
+            <View style={s.pills}>
+              <Pill tone={RESPONSE_TONE[r.status]}>{human(r.status)}</Pill>
+              <Text style={{ fontWeight: 600 }}>{reviewerLabel(r.dimension)}</Text>
+            </View>
+            <Text style={[s.muted, { marginTop: 4 }]}>{r.critique}</Text>
+            <Text style={{ marginTop: 4 }}>{plain(r.response)}</Text>
+            {r.research_query ? <Text style={[s.small, { marginTop: 3 }]}>Searched: {r.research_query}</Text> : null}
+          </Card>
+        ))}
+      </Group>
+
+      {revision.changes.length > 0 && (
+        <Group heading={<Text style={[s.h3, { marginTop: 8 }]}>What the review changed</Text>}>
+          {revision.changes.map((ch, i) => (
+            <Card key={i}>
+              <Text style={[s.muted, { textDecoration: "line-through" }]}>{plain(ch.from)}</Text>
+              <Text style={{ fontWeight: 600, marginTop: 2 }}>→ {plain(ch.to)}</Text>
+              <Text style={[s.muted, { marginTop: 3 }]}>{plain(ch.reason)}</Text>
+            </Card>
+          ))}
+        </Group>
+      )}
+
+      <View wrap={false}>
+        <Text style={[s.h3, { marginTop: 8 }]}>What improved</Text>
+        <View style={{ borderWidth: 1, borderColor: C.line, borderRadius: 6 }}>
+          <View style={[s.row, { backgroundColor: C.surface, paddingHorizontal: 8, paddingVertical: 4 }]}>
+            <Text style={[s.small, { flex: 3 }]} />
+            <Text style={[s.small, s.col]}>Before</Text>
+            <Text style={[s.small, s.col]}>After</Text>
+          </View>
+          {rows.map(([label, before, after]) => (
+            <View key={label} style={[s.row, { borderTopWidth: 1, borderTopColor: C.line, paddingHorizontal: 8, paddingVertical: 4 }]}>
+              <Text style={{ flex: 3 }}>{label}</Text>
+              <Text style={[s.col, s.muted]}>{before}</Text>
+              <Text style={[s.col, { fontWeight: 600 }]}>{after}</Text>
+            </View>
+          ))}
+        </View>
+        <Text style={[s.small, { marginTop: 4 }]}>Counted from the two reports, not estimated by the model.</Text>
+      </View>
+    </View>
   );
 }
 

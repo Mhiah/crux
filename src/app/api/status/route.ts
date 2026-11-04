@@ -16,11 +16,7 @@ export async function GET() {
     TAVILY_API_KEY: has("TAVILY_API_KEY") ? "set" : "missing",
     CRUX_MOCK: forceMock ? "on (forces mock mode)" : "off",
     saves_runs: storageAvailable,
-    // Which Vercel environment served this, and any similarly named variables, so a typo, a
-    // stray space or an empty value shows up. Names and lengths only, never values.
+    REPPO_REVIEW: process.env.REPPO_REVIEW_ENABLED === "1" && has("REPPO_API_KEY") ? "on" : "off",
     vercel_env: process.env.VERCEL_ENV ?? null,
-    similar_variables: Object.keys(process.env)
-      .filter((k) => /serv|tavily|crux/i.test(k))
-      .map((k) => ({ name: JSON.stringify(k), value_length: process.env[k]?.length ?? 0 })),
   });
 }
