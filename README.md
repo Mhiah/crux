@@ -2,7 +2,7 @@
 
 **The Research Engine That Challenges Its Own Conclusions and Learns from Independent Criticism**
 
-**Try it live: [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app)**
+**Try it live: [crux.myacxt.site](https://crux.myacxt.site)**
 
 Crux uses SERV Reasoning to investigate a difficult business question, build a thesis, and challenge its assumptions. Reppo then independently evaluates the reasoning and identifies weaknesses. Instead of merely displaying a score, Crux turns the feedback into targeted research, produces an auditable revision, and measures what actually improved.
 
@@ -61,7 +61,7 @@ Ask a hard business question. Crux runs seven steps, and the report fills in liv
 
 The research takes about a minute (6 SERV calls and 12 Tavily searches). The review runs separately afterwards, so it never slows down the answer.
 
-**To try it:** open [crux-rose-nu.vercel.app](https://crux-rose-nu.vercel.app), press **→** to fill in the demo question (*"Are small businesses actually willing to accept crypto payments?"*), and choose **Find the crux**. When the report is finished, click **Independent review**.
+**To try it:** open [crux.myacxt.site](https://crux.myacxt.site), press **→** to fill in the demo question (*"Are small businesses actually willing to accept crypto payments?"*), and choose **Find the crux**. When the report is finished, click **Independent review**.
 
 ## Independent review
 
