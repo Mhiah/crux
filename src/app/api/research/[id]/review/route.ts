@@ -1,7 +1,7 @@
 import { loadProject, saveProject, storageAvailable, acquireReviewLock, releaseReviewLock } from "@/lib/store";
 import { submitReppo, getReppoReview, ReppoApiError } from "@/lib/reppo/client";
 import { inspectReppoPayload } from "@/lib/reppo/payload";
-import { authorizedReview } from "@/lib/reppo/access";
+import { refundAllowance, takeAllowance } from "@/lib/reppo/limits";
 import type { ReppoReview } from "@/lib/reppo/types";
 
 const reply = (data: unknown, status = 200) =>
@@ -10,9 +10,11 @@ const reply = (data: unknown, status = 200) =>
 /** Disabled by default so anonymous traffic cannot incur evaluation charges. */
 const reviewEnabled = () => process.env.REPPO_REVIEW_ENABLED === "1" && Boolean(process.env.REPPO_API_KEY);
 
-/** Explicit opt-in: submitted research may be viewed by members of Reppo's network. */
+/**
+ * Anyone can request a review of a saved report, with explicit consent, since submitted research
+ * may be viewed by members of Reppo's network. Daily allowances protect the Reppo credits.
+ */
 export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/review">) {
-  if (!authorizedReview(req)) return reply({ error: "Review access denied." }, 403);
   const { id } = await ctx.params;
   const body = await req.json().catch(() => null) as { consent?: unknown } | null;
   if (body?.consent !== true) return reply({ error: "Explicit consent is required." }, 400);
@@ -20,6 +22,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
   if (!storageAvailable) return reply({ error: "Durable storage is required for reviews." }, 503);
   const locked = await acquireReviewLock(id).catch(() => false);
   if (!locked) return reply({ error: "A review submission is already in progress." }, 409);
+  let allowanceTaken = false;
   try {
     const project = await loadProject(id);
     if (!project) return reply({ error: "Report not found." }, 404);
@@ -27,6 +30,9 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
     if (project.status !== "complete" || project.mode !== "live") {
       return reply({ error: "Only completed live reports can be reviewed." }, 409);
     }
+    const limited = await takeAllowance(req, "review");
+    if (limited) return reply({ error: limited }, 429);
+    allowanceTaken = true;
     const preflight = inspectReppoPayload(project);
     console.info("Reppo submission size:", {
       payload_bytes: preflight.payload_bytes,
@@ -40,6 +46,7 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
     await saveProject(project);
     return reply({ review }, 201);
   } catch (error) {
+    if (allowanceTaken) await refundAllowance(req, "review");
     if (error instanceof ReppoApiError) {
       console.error("Reppo rejected request:", { status: error.status, reason: error.reason ?? "No detail provided" });
       return reply({
@@ -54,9 +61,8 @@ export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/r
   }
 }
 
-/** User-triggered refresh; never block the original SERV research request. */
+/** User-triggered refresh, open to anyone: checking a verdict spends no credits. */
 export async function GET(req: Request, ctx: RouteContext<"/api/research/[id]/review">) {
-  if (!authorizedReview(req)) return reply({ error: "Review access denied." }, 403);
   const { id } = await ctx.params;
   const project = await loadProject(id).catch(() => null);
   if (!project) return reply({ error: "Report not found." }, 404);

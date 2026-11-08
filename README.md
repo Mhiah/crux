@@ -75,7 +75,7 @@ Crux's stress test is SERV checking SERV. Independent review gets a second opini
 
 How it works on a report:
 
-1. Click **Independent review**, the step after What changed or the tab after Evidence, enter the owner key, tick consent and choose **Request Reppo review**.
+1. Click **Independent review**, the step after What changed or the tab after Evidence, tick consent and choose **Request Reppo review**. Anyone can do this, no account or key needed.
 2. Crux sends Reppo a compact trace of the report: the question, the thesis and its assumptions, the challenges, the re-evaluation, the conclusion, a balanced sample of facts with their quotes, and the source list.
 3. After at least 10 minutes, **Check for verdict** fetches the result: accept, revise or reject, with a score, a confidence and a critique for each criterion. It's saved with the report, and the step turns green.
 
@@ -106,7 +106,7 @@ The evidence behind it grew, and the counts come straight from the two reports:
 
 Two of the extra flagged figures in this run were a small bug, since fixed: a fact that mentioned its source's label (S24) had the 24 counted as a figure. Follow-up searches now also leave out company sites and blogs whenever research, official, industry or news sources are found.
 
-**Who can request a review, and what it costs.** Each review can use a Reppo credit, and each improvement uses SERV and Tavily credits, so only the owner key can request either, consent must be ticked every time, a report can only be submitted once, and reviews are off unless `REPPO_REVIEW_ENABLED=1`. Reppo's evaluators may see the submitted trace, so don't submit confidential research.
+**Who can request a review, and what it costs.** Anyone can request a review and improve a report. Each review can use a Reppo credit and each improvement uses SERV and Tavily credits, so both have daily allowances: 3 per visitor and 20 for the whole site, resetting at midnight UTC (change them with the variables below). Visitors are counted by a salted hash of their IP address, never the address itself, and a failed attempt doesn't use up an allowance. Consent must be ticked every time, a report can only be reviewed and improved once, and reviews are off unless `REPPO_REVIEW_ENABLED=1`. Reppo's evaluators may see the submitted trace, so don't submit confidential research.
 
 ## Architecture
 
@@ -119,7 +119,7 @@ flowchart LR
   SERV[SERV Reasoning]
   Check["Fact check and source labels<br/>(plain code)"]
   Store[("Saved reports<br/>(Redis on Vercel, files locally)")]
-  Review["/api/research/:id/review<br/>(owner key)"]
+  Review["/api/research/:id/review<br/>(anyone, daily allowance)"]
   Reppo[Reppo evaluation]
   PDF["react-pdf<br/>(in the browser)"]
 
@@ -135,7 +135,7 @@ flowchart LR
   Review -->|report trace + 5 criteria| Reppo
   Reppo -->|verdict and critiques| Review
   Review --> Store
-  Store -->|critiques| Improve["/api/research/:id/revise<br/>(owner key)"]
+  Store -->|critiques| Improve["/api/research/:id/revise<br/>(anyone, daily allowance)"]
   Improve -->|one search per critique| Tavily
   Improve -->|revision| SERV
   Improve -->|new linked report| Store
@@ -222,7 +222,7 @@ A research tool is only useful if you can trust what it shows, so these rules ar
 | --- | --- |
 | An outside critic, not only self-criticism | Independent review sends the finished report to Reppo, so the reasoning is judged by evaluators outside Crux, not only by SERV's own stress test |
 | A verdict is feedback, not proof | The review section says so, and Crux never presents a Reppo score as confirmation that the answer is true |
-| Reviews are deliberate | A review needs the owner key and consent every time, each report can be submitted once, and keys stay on the server, so visitors can never spend credits |
+| Reviews are open, but protected | Anyone can request a review with consent, each report is reviewed and improved once, daily allowances cap spending, and API keys stay on the server |
 | Every fact is backed by its source's own words | SERV must quote each source it cites. [verify.ts](src/lib/research/verify.ts) checks each quote against the source text. A fact with no quote found is dropped and counted in the summary |
 | Figures must match | A figure a fact states must appear in one of its quotes, as digits or words ("thirty-three" matches 33). If not, the fact is flagged in the report and treated as unverified |
 | The case against is always searched for | The search plan must include 3 to 4 challenging searches, and sources are picked search by search in turn, so the supporting searches can't crowd them out |
@@ -240,7 +240,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 Independent review and learning from it are built. Next:
 
 1. **Review the improved report.** Send the improved demo report for its own independent review, and compare Reppo's two scores.
-2. **User accounts,** so reviews and improvements aren't limited to one owner key.
+2. **User accounts and paid reviews,** so people can request more reviews than the free daily allowance.
 
 Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
@@ -248,7 +248,7 @@ Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
 - **The full loop, live.** On the demo question, Reppo returned revise, 65/100, with three critiques; Crux improved the report from them (27 new facts from 10 new sources, facts against 9 to 16, confidence medium to low) and saved it as a new report linked to the original. On the main site, the connection check reports Reppo and Redis connected.
 - **Live research runs** with SERV and Tavily on the demo question: the case against is found (6 to 9 facts against per run), and research, official and industry sources make up most of the 20 sources.
-- **Unit tests** (`npm test`, 100 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
+- **Unit tests** (`npm test`, 106 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
 - **In a real browser** (headless Chromium): every view from 320 px phones to desktop, light and dark, PDF downloads, and the Independent review step from every view.
 - **Type check, lint and production build** are clean, and GitHub Actions runs them on every pull request to `main`, without live API calls.
 
@@ -270,7 +270,9 @@ npm run dev                  # open http://localhost:3000
 | `TAVILY_API_KEY` | Web search |
 | `REPPO_API_KEY` | Reppo, for Independent review (server-side only) |
 | `REPPO_REVIEW_ENABLED` | `1` turns on review requests; off by default |
-| `CRUX_REVIEW_ACCESS_TOKEN` | The private owner key (24+ random characters) needed to request or check a review |
+| `CRUX_REVIEW_ACCESS_TOKEN` | Optional private owner key (24+ random characters): needed for the `/reppo-connect` check, and skips the daily allowances |
+| `CRUX_REVIEWS_PER_VISITOR`, `CRUX_REVIEWS_PER_DAY` | Daily review allowances per visitor and for the whole site (default 3 and 20) |
+| `CRUX_IMPROVES_PER_VISITOR`, `CRUX_IMPROVES_PER_DAY` | Daily improvement allowances per visitor and for the whole site (default 3 and 20) |
 | `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Redis storage on Vercel (added by the Upstash integration), or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` |
 | `SERV_MODEL` | Model to use through SERV (default `gpt-5.4-mini`) |
 | `SERV_SHADOW_AGENT` | `1` adds SERV's shadow-agent check to each step (extra calls) |
@@ -318,7 +320,7 @@ src/
     revise.ts                 Learning from the review: focused searches, revision, metrics
     reasoning/                SERV client, prompts, strict schemas, steps
     research/                 Search, source selection, fact check, source labels
-    reppo/                    Reppo client, request builder, owner access, connection check
+    reppo/                    Reppo client, request builder, daily allowances, owner key, connection check
     store.ts                  Saved reports: Redis on Vercel, files locally
     plain.ts, trace.ts        Plain-language citations and the audit trail
     types.ts                  The data model
@@ -329,7 +331,7 @@ docs/S2_TASKS.md              Task tracker
 
 ## Known limitations
 
-- **Independent review is owner-only.** There are no user accounts yet, so one owner key controls reviews, and each review can use a Reppo credit.
+- **Reviews have a daily allowance.** There are no user accounts yet, so allowances are counted per visitor (by a hash of their IP address) and for the whole site, and each review can use a Reppo credit.
 - **One improvement per report.** Each report is improved once, from up to five critiques; to go further, review the improved report and improve that.
 - **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.
 - **Judgement calls.** A fact's stance and the type of an unrecognised source come from the model.

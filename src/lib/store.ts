@@ -77,6 +77,22 @@ export async function releaseReviewLock(id: string): Promise<void> {
 }
 
 
+const localCounts = new Map<string, number>();
+/**
+ * Adds `by` (default one) to a usage counter and returns the new count. The counter expires after `ttlSeconds`
+ * (set when it is first created), so daily allowances reset on their own.
+ */
+export async function countUse(name: string, ttlSeconds: number, by = 1): Promise<number> {
+  if (useRedis) {
+    const count = await redis<number>(["INCRBY", name, by]);
+    if (count === by) await redis(["EXPIRE", name, ttlSeconds]);
+    return count;
+  }
+  const count = (localCounts.get(name) ?? 0) + by;
+  localCounts.set(name, count);
+  return count;
+}
+
 /** Read-only Redis health probe: PING uses no project data and writes no keys. */
 export async function checkStorageConnection(): Promise<"connected" | "missing" | "unreachable"> {
   if (!useRedis) return "missing";

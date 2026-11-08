@@ -8,22 +8,20 @@ import type { ReppoReview } from "@/lib/reppo/types";
 /** Reppo returns one critique per evaluator, not per criterion; older saves called them "Criterion n". */
 export const reviewerLabel = (dimension: string) => dimension.replace(/^Criterion (\d+)$/, "Reviewer $1");
 
-/** Reppo review is optional: users must opt in to submitting their research. */
+/** Anyone can request a review, with explicit consent; daily allowances on the server protect the credits. */
 export function ReppoReviewPanel({ project, available }: { project: ResearchProject; available: boolean }) {
   const router = useRouter();
   const [review, setReview] = useState<ReppoReview | null>(project.reppo ?? null);
   const [consent, setConsent] = useState(false);
-  const [accessToken, setAccessToken] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const path = "/api/research/" + project.id + "/review";
 
   async function refresh() {
-    if (!accessToken.trim()) { setError("Enter the review access key."); return; }
     setBusy(true); setError(null);
     try {
-      const response = await fetch(path, { cache: "no-store", headers: { "x-crux-review-token": accessToken } });
+      const response = await fetch(path, { cache: "no-store" });
       const data = await response.json() as { review?: ReppoReview | null; error?: string; warning?: string };
       if (!response.ok) throw new Error(data.error ?? "Unable to load review.");
       setReview(data.review ?? null);
@@ -36,12 +34,9 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
 
   const improved = project.revisions?.at(-1);
   async function improve() {
-    if (!accessToken.trim()) { setError("Enter the review access key."); return; }
     setBusy(true); setError(null); setWarning(null);
     try {
-      const response = await fetch("/api/research/" + project.id + "/revise", {
-        method: "POST", headers: { "x-crux-review-token": accessToken },
-      });
+      const response = await fetch("/api/research/" + project.id + "/revise", { method: "POST" });
       const data = await response.json() as { id?: string; error?: string };
       if (!response.ok || !data.id) throw new Error(data.error ?? "Improving the report failed.");
       router.push("/research/" + data.id + "#after-review");
@@ -50,11 +45,10 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
 
   async function submit() {
     if (!consent || !available) return;
-    if (!accessToken.trim()) { setError("Enter the review access key."); return; }
     setBusy(true); setError(null); setWarning(null);
     try {
       const response = await fetch(path, {
-        method: "POST", headers: { "Content-Type": "application/json", "x-crux-review-token": accessToken },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ consent: true }),
       });
       const data = await response.json() as { review?: ReppoReview; error?: string };
@@ -67,16 +61,8 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
     <section id="independent-review" className="scroll-mt-24 rounded-xl border border-line p-4 sm:p-5" aria-label="Independent research review">
       <h2 className="text-lg font-semibold">Independent review</h2>
       <p className="mt-2 text-sm text-muted">Powered by Reppo. An independent evaluation of the research and its reasoning, not proof that every fact is correct.</p>
-      {!available ? (
+      {!available && (
         <p className="mt-3 text-sm text-muted">This report was not saved on the server. Enable durable storage to request an external review.</p>
-      ) : (
-        <label className="mt-3 block max-w-sm text-sm">
-          <span className="text-muted">Owner review access key</span>
-          <input type="password" autoComplete="off" value={accessToken}
-            onChange={(event) => setAccessToken(event.target.value)}
-            className="mt-1 block w-full rounded-lg border border-line bg-background px-3 py-2"
-            placeholder="Enter review key" />
-        </label>
       )}
       {available && (review ? (
         <div className="mt-4 space-y-2 text-sm">
@@ -92,8 +78,8 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
                 </a>
               ) : (
                 <>
-                  <p className="text-muted">Crux can learn from these critiques: it runs a focused search for each one, checks the new facts against their sources, and revises the answer. The original report stays as it is. Uses SERV and Tavily credits and takes about a minute.</p>
-                  <button type="button" className="mt-3 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={busy || !accessToken.trim()} onClick={() => void improve()}>
+                  <p className="text-muted">Crux can learn from these critiques: it runs a focused search for each one, checks the new facts against their sources, and revises the answer. The original report stays as it is. It takes a few minutes.</p>
+                  <button type="button" className="mt-3 rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={busy} onClick={() => void improve()}>
                     {busy ? "Improving… about a minute" : "Improve with this feedback"}
                   </button>
                 </>
@@ -111,7 +97,7 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
               Reppo has finished the review, but its verdict came in a format Crux doesn&apos;t read yet. Fields Reppo sent: {review.unread_fields.join("; ")}
             </p>
           )}
-          {(review.status === "pending" || review.unread_fields) && <button type="button" className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-50" disabled={busy || !accessToken.trim()} onClick={() => void refresh()}>{busy ? "Checking…" : "Check for verdict"}</button>}
+          {(review.status === "pending" || review.unread_fields) && <button type="button" className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-50" disabled={busy} onClick={() => void refresh()}>{busy ? "Checking…" : "Check for verdict"}</button>}
         </div>
       ) : (
         <div className="mt-4 space-y-3">
@@ -120,10 +106,11 @@ export function ReppoReviewPanel({ project, available }: { project: ResearchProj
             <span>I agree to send a concise research and evidence trace to Reppo for external review. The submission may be visible to Reppo network participants; do not submit confidential information.</span>
           </label>
           <div className="flex flex-wrap gap-2">
-            <button type="button" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={!consent || !accessToken.trim() || busy} onClick={() => void submit()}>
+            <button type="button" className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background disabled:opacity-40" disabled={!consent || busy} onClick={() => void submit()}>
               {busy ? "Working…" : "Request Reppo review"}
             </button>
           </div>
+          <p className="text-xs text-muted">Free to request, with a small daily limit per person. Each report can be reviewed once.</p>
         </div>
       ))}
       {warning && <p className="mt-3 text-sm text-muted" role="status">{warning}</p>}
