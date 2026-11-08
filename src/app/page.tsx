@@ -105,11 +105,19 @@ export default function Home() {
       <>
         {header}
         <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-5 pt-10 pb-24 sm:pt-16">
-          <h1 className="text-center text-4xl font-semibold leading-[1.1] tracking-tight text-balance sm:text-6xl">
-            Research that challenges itself.
+          <h1 className="text-center font-display text-[2.6rem] font-extrabold leading-[1.04] tracking-[-0.035em] [font-variation-settings:'opsz'_96] sm:-mx-16 sm:text-7xl lg:text-[5rem]">
+            Research that{" "}
+            {/* The word most AI research stops at, crossed out. Hidden from screen readers. */}
+            <span aria-hidden="true" className="text-muted/70 line-through decoration-bad decoration-[0.09em]">
+              agrees
+            </span>
+            <br />
+            challenges itself.
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-center text-lg text-muted text-balance">
-            SERV Reasoning stress tests every answer. Reppo independently reviews it.
+          <p className="mx-auto mt-6 text-center text-base leading-relaxed text-muted sm:text-lg">
+            <span className="font-semibold text-foreground">SERV Reasoning</span> stress tests every answer.
+            <br />
+            <span className="font-semibold text-foreground">Reppo</span> independently reviews it.
           </p>
 
           <form
