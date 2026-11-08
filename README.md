@@ -12,7 +12,7 @@ Most AI research tools find support for an answer and write it up confidently. E
 
 Built on [SERV Reasoning](https://docs.openserv.ai/serv-reasoning/why) (OpenServ) for every reasoning step, [Tavily](https://tavily.com) for web search, and [Reppo](https://www.reppofoundation.org/evaluation-api) for independent review.
 
-![The Crux home page: Research that challenges itself.](docs/screenshots/s2-home-after.png)
+![The Crux home page: Research that agrees, crossed out, challenges itself.](docs/screenshots/s2-home-after.png)
 
 ## What's new: independent review by Reppo
 
@@ -24,8 +24,8 @@ Crux now sends the finished report to Reppo for **Independent review**, the step
 
 | Before | Now |
 | --- | --- |
-| ![The first Crux home page: AI research that stress tests its own conclusions.](docs/screenshots/s2-home-before.png) | ![Crux with Reppo home page: Research that challenges itself.](docs/screenshots/s2-home-after.png) |
-| *AI research that stress tests its own conclusions.*<br>Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. | *Research that challenges itself.*<br>SERV Reasoning stress tests every answer. Reppo independently reviews it. |
+| ![The first Crux home page: AI research that stress tests its own conclusions.](docs/screenshots/s2-home-before.png) | ![Crux with Reppo home page: Research that agrees, crossed out, challenges itself.](docs/screenshots/s2-home-after.png) |
+| *AI research that stress tests its own conclusions.*<br>Using SERV Reasoning, Crux forms a thesis, stress tests it against the evidence and audits it. | *Research that ~~agrees~~ challenges itself.*<br>**SERV Reasoning** stress tests every answer. **Reppo** independently reviews it. |
 
 **The steps of a report**
 
@@ -192,9 +192,9 @@ Every fact shows the exact words it came from, with a link to the source. The su
 
 ### PDF report
 
-**Download** saves the whole report as a PDF: the answer and what changed, the reasoning, and the evidence with every quote and a numbered source list.
+**Download** saves the whole report as a PDF: the answer and what changed, Reppo's verdict and critiques, the reasoning, and the evidence with every quote and a numbered source list. An improved report's PDF also carries the before and after answers, the reply to each critique, what the review changed and the What improved table.
 
-![Two pages of the PDF report](docs/screenshots/pdf.png)
+![Two pages of an improved report's PDF: the answer before and after the review, and the What improved table](docs/screenshots/pdf.png)
 
 ## Every step, in code
 
@@ -240,8 +240,7 @@ Two limits to be plain about: a fact's **stance** (for or against) and the **typ
 Independent review and learning from it are built. Next:
 
 1. **Review the improved report.** Send the improved demo report for its own independent review, and compare Reppo's two scores.
-2. **Reppo's verdict and the improvement in the PDF report.**
-3. **User accounts,** so reviews and improvements aren't limited to one owner key.
+2. **User accounts,** so reviews and improvements aren't limited to one owner key.
 
 Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
@@ -332,7 +331,6 @@ docs/S2_TASKS.md              Task tracker
 
 - **Independent review is owner-only.** There are no user accounts yet, so one owner key controls reviews, and each review can use a Reppo credit.
 - **One improvement per report.** Each report is improved once, from up to five critiques; to go further, review the improved report and improve that.
-- **The PDF doesn't include the Reppo verdict yet.**
 - **Evidence depth.** Each run reads up to 20 sources, and only the excerpt Tavily returns for each (up to 2,500 characters), not whole pages.
 - **Judgement calls.** A fact's stance and the type of an unrecognised source come from the model.
 - **SERV's prompt guard** occasionally blocks harmless requests. Blocks are retried up to twice; if a run still fails, running it again usually works.
