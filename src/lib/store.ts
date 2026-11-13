@@ -60,11 +60,14 @@ export async function loadProject(id: string): Promise<ResearchProject | null> {
   }
 }
 
-/** Guard against two submits for the same run. Global limits still apply at Reppo. */
-export async function acquireReviewLock(id: string): Promise<boolean> {
+/**
+ * Guard against two submits (or two improvements) of the same report at once. The lock must
+ * outlive the longest holder: improving a report can take the route's full 300 seconds.
+ */
+export async function acquireReviewLock(id: string, seconds = 90): Promise<boolean> {
   valid(id);
   if (useRedis) {
-    return (await redis<string | null>(["SET", "crux:s2:reviewlock:" + id, "busy", "NX", "EX", 90])) === "OK";
+    return (await redis<string | null>(["SET", "crux:s2:reviewlock:" + id, "busy", "NX", "EX", seconds])) === "OK";
   }
   if (localLocks.has(id)) return false;
   localLocks.add(id);

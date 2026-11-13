@@ -7,6 +7,8 @@ import type { ReppoReview } from "@/lib/reppo/types";
 const reply = (data: unknown, status = 200) =>
   Response.json(data, { status, headers: { "Cache-Control": "no-store" } });
 
+const REFRESH_INTERVAL_MS = 20_000;
+
 /** Disabled by default so anonymous traffic cannot incur evaluation charges. */
 const reviewEnabled = () => process.env.REPPO_REVIEW_ENABLED === "1" && Boolean(process.env.REPPO_API_KEY);
 
@@ -77,6 +79,9 @@ export async function GET(req: Request, ctx: RouteContext<"/api/research/[id]/re
   // A settled verdict is final, unless it arrived in a shape Crux couldn't read: then read it again.
   if (project.reppo.status === "settled" && !project.reppo.unread_fields) return reply({ review: project.reppo });
   if (!reviewEnabled()) return reply({ review: project.reppo, warning: "Reppo review refresh disabled." });
+  // Anyone can check, so ask Reppo at most once every 20 seconds per report; otherwise the saved status is current enough.
+  const last = project.reppo.checked_at ? Date.parse(project.reppo.checked_at) : 0;
+  if (Date.now() - last < REFRESH_INTERVAL_MS) return reply({ review: project.reppo });
   try {
     const updated = await getReppoReview(project.reppo, process.env.REPPO_API_KEY!);
     project.reppo = updated;

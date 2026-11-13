@@ -3,15 +3,21 @@ import { countUse } from "../store";
 import { authorizedReview } from "./access";
 
 /**
- * Anyone can request a Reppo review or improve a report, but each one spends credits (a Reppo
- * evaluation, or SERV and Tavily calls), so both have daily allowances: a few per visitor and a
+ * Anyone can run research, request a Reppo review or improve a report, but each one spends credits
+ * (SERV and Tavily calls, or a Reppo evaluation), so each has daily allowances: a few per visitor and a
  * cap for the whole site. Both reset at midnight UTC and can be changed in the deployment's
  * environment variables. The owner key, if sent, skips the allowances.
  */
-export type CostlyAction = "review" | "improve";
+export type CostlyAction = "review" | "improve" | "research";
 
-const DEFAULTS = { perVisitor: 3, perDay: 20 };
-const ACTION_WORDS: Record<CostlyAction, string> = { review: "reviews", improve: "improvements" };
+const DEFAULTS: Record<CostlyAction, { perVisitor: number; perDay: number }> = {
+  review: { perVisitor: 3, perDay: 20 },
+  improve: { perVisitor: 3, perDay: 20 },
+  // A research run is about 6 SERV calls and 12 Tavily searches.
+  research: { perVisitor: 10, perDay: 100 },
+};
+const ACTION_WORDS: Record<CostlyAction, string> = { review: "reviews", improve: "improvements", research: "research runs" };
+const SETTING_NAMES: Record<CostlyAction, string> = { review: "CRUX_REVIEWS", improve: "CRUX_IMPROVES", research: "CRUX_RUNS" };
 
 function setting(name: string, fallback: number): number {
   const raw = process.env[name]?.trim();
@@ -21,17 +27,23 @@ function setting(name: string, fallback: number): number {
 }
 
 export function allowancesFor(action: CostlyAction) {
-  const prefix = "CRUX_" + action.toUpperCase();
+  const prefix = SETTING_NAMES[action];
   return {
-    perVisitor: setting(prefix + "S_PER_VISITOR", DEFAULTS.perVisitor),
-    perDay: setting(prefix + "S_PER_DAY", DEFAULTS.perDay),
+    perVisitor: setting(prefix + "_PER_VISITOR", DEFAULTS[action].perVisitor),
+    perDay: setting(prefix + "_PER_DAY", DEFAULTS[action].perDay),
   };
 }
 
-/** A short, salted hash of the visitor's IP address: enough to count uses, never stored as the IP itself. */
+/**
+ * A short, salted hash of the visitor's IP address: enough to count uses, never stored as the IP
+ * itself. The address set by the hosting platform (x-real-ip on Vercel) is preferred over the
+ * x-forwarded-for chain, whose first entry a client can try to supply. Even if a visitor's
+ * address is spoofed, the whole-site daily cap still bounds spending.
+ */
 export function visitorKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const ip = forwarded || request.headers.get("x-real-ip")?.trim() || "unknown";
+  const ip = request.headers.get("x-real-ip")?.trim()
+    || request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || "unknown";
   return createHash("sha256").update((process.env.CRUX_LIMIT_SALT ?? "crux-s2") + ":" + ip).digest("hex").slice(0, 20);
 }
 
@@ -50,11 +62,17 @@ export async function takeAllowance(request: Request, action: CostlyAction, now 
   const { perVisitor, perDay } = allowancesFor(action);
   const words = ACTION_WORDS[action];
   const [mineKey, allKey] = counterKeys(request, action, now);
-  const mine = await countUse(mineKey, TTL);
+  // If the counter can't be reached, refuse rather than spend credits without a limit.
+  let mine: number;
+  try { mine = await countUse(mineKey, TTL); }
+  catch (error) {
+    console.error("Allowance check failed:", error instanceof Error ? error.message : error);
+    return "Crux couldn't check today's limits just now. Please try again in a minute.";
+  }
   if (mine > perVisitor) {
     return `You've used today's ${perVisitor} free ${words}. Please try again tomorrow.`;
   }
-  const total = await countUse(allKey, TTL);
+  const total = await countUse(allKey, TTL).catch(() => Number.POSITIVE_INFINITY);
   if (total > perDay) {
     return `Crux has reached today's limit of ${perDay} ${words} for everyone. Please try again tomorrow.`;
   }

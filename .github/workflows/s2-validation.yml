@@ -1,7 +1,7 @@
 name: Crux S2 validation
 on:
   push:
-    branches: [feat/s2-reppo-review]
+    branches: [main]
   pull_request:
     branches: [main]
 permissions:

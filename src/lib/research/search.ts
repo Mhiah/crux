@@ -45,12 +45,24 @@ export class TavilySearch implements SearchProvider {
       throw new Error(`Tavily search failed (${res.status}): ${text}`);
     }
     const data = (await res.json()) as TavilyResponse;
-    return data.results.map((r) => ({
+    // Only web links: a result's URL becomes a clickable link in the report and the PDF.
+    return data.results.filter((r) => isWebUrl(r.url)).map((r) => ({
       url: r.url,
       title: r.title,
       content: r.content,
       score: r.score,
       published_date: r.published_date ?? null,
     }));
+  }
+}
+
+/** True for absolute http(s) URLs; anything else (javascript:, data:, relative) is not shown as a link. */
+export function isWebUrl(url: unknown): url is string {
+  if (typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
   }
 }

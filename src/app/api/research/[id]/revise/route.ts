@@ -18,7 +18,7 @@ const reply = (data: unknown, status = 200) =>
 export async function POST(req: Request, ctx: RouteContext<"/api/research/[id]/revise">) {
   if (!storageAvailable) return reply({ error: "Durable storage is required to save an improved report." }, 503);
   const { id } = await ctx.params;
-  const locked = await acquireReviewLock(id).catch(() => false);
+  const locked = await acquireReviewLock(id, maxDuration + 30).catch(() => false);
   if (!locked) return reply({ error: "This report is already being worked on. Try again in a minute." }, 409);
   let allowanceTaken = false;
   try {

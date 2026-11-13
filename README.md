@@ -248,7 +248,7 @@ Progress is tracked in [docs/S2_TASKS.md](docs/S2_TASKS.md).
 
 - **The full loop, live.** On the demo question, Reppo returned revise, 65/100, with three critiques; Crux improved the report from them (27 new facts from 10 new sources, facts against 9 to 16, confidence medium to low) and saved it as a new report linked to the original. On the main site, the connection check reports Reppo and Redis connected.
 - **Live research runs** with SERV and Tavily on the demo question: the case against is found (6 to 9 facts against per run), and research, official and industry sources make up most of the 20 sources.
-- **Unit tests** (`npm test`, 106 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
+- **Unit tests** (`npm test`, 113 tests): quote verification, figures in digits and words, source selection, balanced searches, the full pipeline end to end, the Reppo request, response parsing and owner-only access, and improving a report from its critiques (new facts numbered after the original's, sources not reused, every critique answered, the original left unchanged).
 - **In a real browser** (headless Chromium): every view from 320 px phones to desktop, light and dark, PDF downloads, and the Independent review step from every view.
 - **Type check, lint and production build** are clean, and GitHub Actions runs them on every pull request to `main`, without live API calls.
 
@@ -273,6 +273,7 @@ npm run dev                  # open http://localhost:3000
 | `CRUX_REVIEW_ACCESS_TOKEN` | Optional private owner key (24+ random characters): needed for the `/reppo-connect` check, and skips the daily allowances |
 | `CRUX_REVIEWS_PER_VISITOR`, `CRUX_REVIEWS_PER_DAY` | Daily review allowances per visitor and for the whole site (default 3 and 20) |
 | `CRUX_IMPROVES_PER_VISITOR`, `CRUX_IMPROVES_PER_DAY` | Daily improvement allowances per visitor and for the whole site (default 3 and 20) |
+| `CRUX_RUNS_PER_VISITOR`, `CRUX_RUNS_PER_DAY` | Daily live research-run allowances per visitor and for the whole site (default 10 and 100) |
 | `KV_REST_API_URL` + `KV_REST_API_TOKEN` | Redis storage on Vercel (added by the Upstash integration), or `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` |
 | `SERV_MODEL` | Model to use through SERV (default `gpt-5.4-mini`) |
 | `SERV_SHADOW_AGENT` | `1` adds SERV's shadow-agent check to each step (extra calls) |
